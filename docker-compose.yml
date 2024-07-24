@@ -1,0 +1,13 @@
+services:
+  train:
+    container_name: "alpha-rebrew-train"
+    build: .
+    tty: true
+    volumes:
+      - ./workspace:/workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [utility, compute, video]

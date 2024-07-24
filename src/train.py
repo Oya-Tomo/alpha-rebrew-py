@@ -109,6 +109,7 @@ def train():
         fin, working_self_play = ray.wait(working_self_play, num_returns=1)
         history, score = ray.get(fin[0])
         dataset.add(history, score * cfg.value_discount)
+        print(f"    Game: {count}, Score: {score}")
 
         working_self_play.append(
             self_play.remote(
@@ -139,6 +140,7 @@ def train():
             fin, working_self_play = ray.wait(working_self_play, num_returns=1)
             history, score = ray.get(fin[0])
             dataset.add(history, score * cfg.value_discount)
+            print(f"    Game: {count}, Score: {score}")
 
             if score > 0:
                 win += 1

@@ -3,6 +3,9 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
+    warmup_games: int
+    warmup_mcts_simulation: int
+
     loops: int
     games: int
     epochs: int

@@ -17,9 +17,11 @@ def train():
     ray.init(num_cpus=15, num_gpus=1)
 
     cfg = Config(
+        warmup_games=3000,
+        warmup_mcts_simulation=40,
         loops=10000,
-        games=500,
-        epochs=100,
+        games=200,
+        epochs=20,
         save_epochs=2,
         batch_size=512,
         # optimizer
@@ -88,24 +90,22 @@ def train():
     training_weight = ray.put(training_model.cpu().state_dict())
     opponent_weight = ray.put(opponent_model.cpu().state_dict())
 
-    working_self_play: list = []
-    for count in range(cfg.games):
-        working_self_play.append(
-            self_play.remote(
-                training_weight,
-                opponent_weight,
-                Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                cfg.mcts_simulation,
-            )
+    working_self_play: list = [
+        self_play.remote(
+            training_weight,
+            opponent_weight,
+            Stone.BLACK if count % 2 == 0 else Stone.WHITE,
+            cfg.warmup_mcts_simulation,
         )
+        for count in range(cfg.games)
+    ]
 
     # Warm up for dataset
     print("Warm up started ...")
 
     dataset = PVDataset(cfg.data_length, cfg.data_limit)
 
-    count = 0
-    while not dataset.enough_data():
+    for count in range(cfg.warmup_games):
         fin, working_self_play = ray.wait(working_self_play, num_returns=1)
         history, score = ray.get(fin[0])
         dataset.add(history, score * cfg.value_discount)
@@ -116,10 +116,9 @@ def train():
                 training_weight,
                 opponent_weight,
                 Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                cfg.mcts_simulation,
+                cfg.warmup_mcts_simulation,
             )
         )
-        count += 1
 
     print("Warm up finished !!")
 

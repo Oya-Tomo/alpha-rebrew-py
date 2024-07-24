@@ -108,7 +108,7 @@ def train():
     while not dataset.enough_data():
         fin, working_self_play = ray.wait(working_self_play, num_returns=1)
         history, score = ray.get(fin[0])
-        dataset.add(history, score)
+        dataset.add(history, score * cfg.value_discount)
 
         working_self_play.append(
             self_play.remote(
@@ -138,7 +138,7 @@ def train():
         for count in range(cfg.games):
             fin, working_self_play = ray.wait(working_self_play, num_returns=1)
             history, score = ray.get(fin[0])
-            dataset.add(history, score)
+            dataset.add(history, score * cfg.value_discount)
 
             if score > 0:
                 win += 1

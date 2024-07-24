@@ -4,7 +4,7 @@ services:
     build: .
     tty: true
     volumes:
-      - ./workspace:/workspace
+      - ./:/workspace
     deploy:
       resources:
         reservations:

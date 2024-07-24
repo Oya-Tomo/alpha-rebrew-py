@@ -8,6 +8,8 @@ RUN apt install vim \
         python3-pip \
         -y
 
+RUN pip3 install torch torchvision numpy ray
+
 WORKDIR /workspace
 
-CMD [ "python3", "src/train.py" ]
+CMD [ "python3", "./src/train.py" ]

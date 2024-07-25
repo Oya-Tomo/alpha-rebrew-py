@@ -11,15 +11,15 @@ from dataloader import PVDataset
 from match import self_play
 from models import PVNet
 from config import Config
+from process import ProcessPool
 
 try:
     set_start_method("spawn")
 except RuntimeError:
-    print("RuntimeError")
-    sys.exit(1)
+    pass
 
 
-def train():
+if __name__ == "__main__":
     cfg = Config(
         warmup_games=3000,
         warmup_mcts_simulation=40,
@@ -34,7 +34,7 @@ def train():
         weight_decay=0.00001,
         # play
         switch_threshold=0.55,
-        mcts_simulation=100,
+        mcts_simulation=200,
         value_discount=0.95,
         # history buffer
         data_length=500000,
@@ -79,22 +79,22 @@ def train():
     training_weight = model.cpu().state_dict()
     opponent_weight = model.cpu().state_dict()
 
-    queue = Queue()
+    queue = Queue(maxsize=cfg.num_processes)
 
-    working_self_play: list[Process] = []
+    self_play_pool = ProcessPool()
     for count in range(cfg.num_processes):
-        p = Process(
-            target=self_play,
-            args=(
-                queue,
-                training_weight,
-                opponent_weight,
-                Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                cfg.warmup_mcts_simulation,
-            ),
+        self_play_pool.add(
+            Process(
+                target=self_play,
+                args=(
+                    queue,
+                    training_weight,
+                    opponent_weight,
+                    Stone.BLACK if count % 2 == 0 else Stone.WHITE,
+                    cfg.warmup_mcts_simulation,
+                ),
+            )
         )
-        p.start()
-        working_self_play.append(p)
 
     # Warm up for dataset
     print("Warm up started ...")
@@ -102,25 +102,24 @@ def train():
     dataset = PVDataset(cfg.data_length, cfg.data_limit)
 
     for count in range(cfg.warmup_games):
+        self_play_pool.join_one()
         history, score = queue.get()
+        print(f"Warmup game: {count}, {score}")
         dataset.add(copy.deepcopy(history), copy.deepcopy(score))
         del history, score
 
-        working_self_play[0].join()
-        working_self_play.pop(0)
-
-        p = Process(
-            target=self_play,
-            args=(
-                queue,
-                training_weight,
-                opponent_weight,
-                Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                cfg.warmup_mcts_simulation,
+        self_play_pool.add(
+            Process(
+                target=self_play,
+                args=(
+                    queue,
+                    training_weight,
+                    opponent_weight,
+                    Stone.BLACK if count % 2 == 0 else Stone.WHITE,
+                    cfg.warmup_mcts_simulation,
+                ),
             ),
         )
-        p.start()
-        working_self_play.append(p)
 
     print("Warm up finished !!")
 
@@ -137,25 +136,30 @@ def train():
         win = 0
         lose = 0
         for count in range(cfg.games):
+            self_play_pool.join_one()
             history, score = queue.get()
+            print(f"    Game: {count}, Score: {score}")
             dataset.add(copy.deepcopy(history), copy.deepcopy(score))
+
+            if score > 0:
+                win += 1
+            elif score < 0:
+                lose += 1
+
             del history, score
 
-            working_self_play[0].join()
-            working_self_play.pop(0)
-
-            p = Process(
-                target=self_play,
-                args=(
-                    queue,
-                    training_weight,
-                    opponent_weight,
-                    Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                    cfg.warmup_mcts_simulation,
-                ),
+            self_play_pool.add(
+                Process(
+                    target=self_play,
+                    args=(
+                        queue,
+                        training_weight,
+                        opponent_weight,
+                        Stone.BLACK if count % 2 == 0 else Stone.WHITE,
+                        cfg.mcts_simulation,
+                    ),
+                )
             )
-            p.start()
-            working_self_play.append(p)
 
         if win / (win + lose) > cfg.switch_threshold:
             opponent_weight = model.cpu().state_dict()
@@ -215,7 +219,3 @@ def train():
                 },
                 f"checkpoint/model_{loop}.pt",
             )
-
-
-if __name__ == "__main__":
-    train()

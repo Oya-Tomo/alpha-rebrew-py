@@ -19,6 +19,7 @@ def train():
     cfg = Config(
         warmup_games=3000,
         warmup_mcts_simulation=40,
+        num_processes=15,
         loops=10000,
         games=200,
         epochs=20,

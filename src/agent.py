@@ -1,3 +1,4 @@
+import copy
 import random
 from dataclasses import dataclass
 import torch
@@ -9,14 +10,15 @@ from mcts import MCT
 
 @dataclass
 class Step:
-    state: torch.Tensor
+    state: Board
+    turn: Stone
     policy: float
 
 
 class ModelAgent:
     # ModelAgent
     #     MCTS + e-greedy decision process
-    #     buffer: [(state, policy)]
+    #     buffer: [(state, turn, policy)]
 
     def __init__(self, stone: Stone, mct: MCT, sim: int, eps: float) -> None:
         self.stone = stone
@@ -30,6 +32,9 @@ class ModelAgent:
         actions = board.get_actions(self.stone)
 
         policy = self.mct.search(board, self.stone, self.sim)
+        self.buffer.append(
+            Step(state=copy.deepcopy(board), turn=self.stone, policy=policy)
+        )
         policy = np.array(policy, dtype=np.float32)
 
         if self.eps > random.random():
@@ -41,13 +46,6 @@ class ModelAgent:
                 if action in actions:
                     break
                 policy[action] = 0
-
-        self.buffer.append(
-            Step(
-                state=board.to_tensor(self.stone),
-                policy=policy,
-            )
-        )
 
         return action
 

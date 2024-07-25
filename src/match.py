@@ -1,5 +1,5 @@
 import torch
-import ray
+from torch.multiprocessing import Queue
 from bitboard import Board, Stone, flip
 from agent import ModelAgent, Step
 from mcts import MCT
@@ -10,16 +10,20 @@ def count_to_score(b: int, w: int, e: int) -> float:
     return (b - w) / (b + w)
 
 
-@ray.remote
-def self_play(training_weight, opponent_weight, trainer: Stone, sim: int) -> tuple[
-    list[Step],  # agent move history
-    float,  # agent earned score
-]:
+def self_play(
+    queue: Queue,
+    training_weight,
+    opponent_weight,
+    trainer: Stone,
+    sim: int,
+):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     black_model = PVNet()
     black_model.load_state_dict(
         training_weight if trainer == Stone.BLACK else opponent_weight
     )
+    black_model = black_model.to(device)
     black_mct = MCT(black_model, 0.35, 0.1)
     black_agent = ModelAgent(Stone.BLACK, black_mct, sim, 0.01)
 
@@ -27,6 +31,7 @@ def self_play(training_weight, opponent_weight, trainer: Stone, sim: int) -> tup
     white_model.load_state_dict(
         training_weight if trainer == Stone.WHITE else opponent_weight
     )
+    white_model = white_model.to(device)
     white_mct = MCT(white_model, 0.35, 0.1)
     white_agent = ModelAgent(Stone.WHITE, white_mct, sim, 0.01)
 
@@ -45,22 +50,35 @@ def self_play(training_weight, opponent_weight, trainer: Stone, sim: int) -> tup
     b, w, e = board.get_count()
     score = count_to_score(b, w, e)
 
+    print(score)
+
     if trainer == Stone.BLACK:
-        return (black_agent.get_history(), score)
+        queue.put((black_agent.get_history(), score))
     else:
-        return (white_agent.get_history(), -score)
+        queue.put((white_agent.get_history(), -score))
 
 
 if __name__ == "__main__":
-    ray.init()
+    from multiprocessing import Process
 
-    model = PVNet()
+    queue = Queue()
 
-    p = self_play.remote(
-        model.state_dict(),
-        model.state_dict(),
-        30,
+    training_weight = PVNet().state_dict()
+    opponent_weight = PVNet().state_dict()
+
+    p = Process(
+        target=self_play,
+        args=(
+            queue,
+            training_weight,
+            opponent_weight,
+            Stone.BLACK,
+            30,
+        ),
     )
+    p.start()
+    p.join()
 
-    result = ray.get(p)
+    result = queue.get()
     print(result)
+    del result

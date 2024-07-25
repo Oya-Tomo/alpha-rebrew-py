@@ -105,7 +105,10 @@ if __name__ == "__main__":
         self_play_pool.join_one()
         history, score = queue.get()
         print(f"Warmup game: {count}, {score}")
-        dataset.add(copy.deepcopy(history), copy.deepcopy(score))
+        dataset.add(
+            copy.deepcopy(history),
+            copy.deepcopy(score) * cfg.value_discount,
+        )
         del history, score
 
         self_play_pool.add(
@@ -139,7 +142,10 @@ if __name__ == "__main__":
             self_play_pool.join_one()
             history, score = queue.get()
             print(f"    Game: {count}, Score: {score}")
-            dataset.add(copy.deepcopy(history), copy.deepcopy(score))
+            dataset.add(
+                copy.deepcopy(history),
+                copy.deepcopy(score) * cfg.value_discount,
+            )
 
             if score > 0:
                 win += 1

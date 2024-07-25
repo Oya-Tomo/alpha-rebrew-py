@@ -1,3 +1,4 @@
+import time
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -79,7 +80,9 @@ def manual_match(tester: Stone):
                     break
                 print("Invalid action. Please enter a valid action.")
         else:
+            t = time.time()
             action = agent.act(board)
+            print(f"Time: {time.time() - t:.2f}s")
 
         board.act(turn, action)
         turn = flip(turn)

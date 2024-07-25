@@ -6,6 +6,8 @@ class Config:
     warmup_games: int
     warmup_mcts_simulation: int
 
+    num_processes: int
+
     loops: int
     games: int
     epochs: int

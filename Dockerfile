@@ -12,4 +12,4 @@ RUN pip3 install torch torchvision numpy ray
 
 WORKDIR /workspace
 
-CMD [ "python3", "./src/train_v2.py" ]
+CMD [ "python3", "./src/train_v3.py" ]

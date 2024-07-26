@@ -22,7 +22,7 @@ except RuntimeError:
 if __name__ == "__main__":
     cfg = Config(
         warmup_games=3000,
-        warmup_mcts_simulation=40,
+        warmup_mcts_simulation=100,
         num_processes=15,
         loops=10000,
         games=200,

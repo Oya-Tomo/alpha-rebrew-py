@@ -180,7 +180,7 @@ if __name__ == "__main__":
             dataset,
             batch_size=cfg.batch_size,
             shuffle=True,
-            num_workers=10,
+            num_workers=0,
             pin_memory=True,
         )
 

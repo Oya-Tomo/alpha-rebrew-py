@@ -35,6 +35,7 @@ if __name__ == "__main__":
         # play
         switch_threshold=0.55,
         mcts_simulation=200,
+        random_begin=18,
         value_discount=0.95,
         # history buffer
         data_length=500000,
@@ -92,6 +93,7 @@ if __name__ == "__main__":
                     opponent_weight,
                     Stone.BLACK if count % 2 == 0 else Stone.WHITE,
                     cfg.warmup_mcts_simulation,
+                    cfg.random_begin,
                 ),
             )
         )
@@ -120,6 +122,7 @@ if __name__ == "__main__":
                     opponent_weight,
                     Stone.BLACK if count % 2 == 0 else Stone.WHITE,
                     cfg.warmup_mcts_simulation,
+                    cfg.random_begin,
                 ),
             ),
         )
@@ -163,6 +166,7 @@ if __name__ == "__main__":
                         opponent_weight,
                         Stone.BLACK if count % 2 == 0 else Stone.WHITE,
                         cfg.mcts_simulation,
+                        cfg.random_begin,
                     ),
                 )
             )

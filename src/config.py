@@ -19,6 +19,7 @@ class Config:
 
     switch_threshold: float  # win rate
     mcts_simulation: int  # mcts simulation count
+    random_begin: int
     value_discount: float  # value discount rate
 
     data_length: int

@@ -49,5 +49,15 @@ class ModelAgent:
 
         return action
 
+    def act_random(self, board: Board) -> int:
+        actions = board.get_actions(self.stone)
+
+        policy = self.mct.search(board, self.stone, self.sim)
+        self.buffer.append(
+            Step(state=copy.deepcopy(board), turn=self.stone, policy=policy)
+        )
+        action = random.choice(actions)
+        return action
+
     def get_history(self):
         return self.buffer

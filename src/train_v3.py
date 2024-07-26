@@ -171,6 +171,7 @@ if __name__ == "__main__":
                 )
             )
 
+        print(f"    Result: win {win}, lose {lose}")
         if win / (win + lose) > cfg.switch_threshold:
             opponent_weight = model.cpu().state_dict()
             generation += 1

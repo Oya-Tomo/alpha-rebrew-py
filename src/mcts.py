@@ -7,11 +7,16 @@ import math
 from bitboard import ACTION_COUNT, Board, Stone, flip
 
 
+def sigmoid(x: float, a: float):
+    return 1 / (1 + math.exp(-a * x))
+
+
 # black win -> positive +
 # white win -> negative -
 # draw      -> 0
 def count_to_score(b: int, w: int) -> float:
-    return (b - w) / (b + w)
+    count_score = (b - w) / (b + w)
+    return sigmoid(count_score, 6) * 2 - 1
 
 
 class MCT:

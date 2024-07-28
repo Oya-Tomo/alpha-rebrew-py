@@ -2,12 +2,8 @@ import torch
 from torch.multiprocessing import Queue
 from bitboard import Board, Stone, flip
 from agent import ModelAgent, Step
-from mcts import MCT
+from mcts import MCT, count_to_score
 from models import PVNet
-
-
-def count_to_score(b: int, w: int, e: int) -> float:
-    return (b - w) / (b + w)
 
 
 def self_play(
@@ -61,7 +57,7 @@ def self_play(
         turn = flip(turn)
 
     b, w, e = board.get_count()
-    score = count_to_score(b, w, e)
+    score = count_to_score(b, w)
 
     if trainer == Stone.BLACK:
         queue.put((black_agent.get_history(), score))

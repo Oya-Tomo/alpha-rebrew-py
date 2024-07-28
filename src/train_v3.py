@@ -25,7 +25,7 @@ if __name__ == "__main__":
         warmup_mcts_simulation=400,
         num_processes=15,
         loops=10000,
-        games=300,
+        games=400,
         epochs=40,
         save_epochs=2,
         batch_size=512,

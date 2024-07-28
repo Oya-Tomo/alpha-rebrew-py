@@ -21,12 +21,12 @@ except RuntimeError:
 
 if __name__ == "__main__":
     cfg = Config(
-        warmup_games=3000,
-        warmup_mcts_simulation=100,
+        warmup_games=4000,
+        warmup_mcts_simulation=400,
         num_processes=15,
         loops=10000,
-        games=200,
-        epochs=20,
+        games=300,
+        epochs=40,
         save_epochs=2,
         batch_size=512,
         # optimizer
@@ -34,9 +34,9 @@ if __name__ == "__main__":
         weight_decay=0.00001,
         # play
         switch_threshold=0.55,
-        mcts_simulation=200,
+        mcts_simulation=800,
         random_begin=18,
-        value_discount=0.95,
+        value_discount=1.0,
         # history buffer
         data_length=500000,
         data_limit=510000,

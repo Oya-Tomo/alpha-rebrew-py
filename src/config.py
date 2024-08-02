@@ -6,6 +6,8 @@ class Config:
     warmup_games: int
     warmup_mcts_simulation: int
 
+    num_processes: int
+
     loops: int
     games: int
     epochs: int
@@ -17,6 +19,7 @@ class Config:
 
     switch_threshold: float  # win rate
     mcts_simulation: int  # mcts simulation count
+    random_begin: int
     value_discount: float  # value discount rate
 
     data_length: int

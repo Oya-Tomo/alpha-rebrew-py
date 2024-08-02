@@ -1,3 +1,4 @@
+import time
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -46,11 +47,11 @@ def manual_match(tester: Stone):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     board = Board()
     model = PVNet()
-    model.load_state_dict(torch.load("checkpoint/model_7.pt")["model"])
+    model.load_state_dict(torch.load("checkpoint/model_29.pt")["model"])
     model = model.to(device)
 
     mct = MCT(model, 0.01, 0.01)
-    agent = ModelAgent(flip(tester), mct, 100, 0)
+    agent = ModelAgent(flip(tester), mct, 1000, 0)
 
     model.eval()
 
@@ -79,7 +80,9 @@ def manual_match(tester: Stone):
                     break
                 print("Invalid action. Please enter a valid action.")
         else:
+            t = time.time()
             action = agent.act(board)
+            print(f"Time: {time.time() - t:.2f}s")
 
         board.act(turn, action)
         turn = flip(turn)

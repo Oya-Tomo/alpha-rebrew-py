@@ -3,6 +3,7 @@ services:
     container_name: "alpha-rebrew-train"
     build: .
     tty: true
+    shm_size: "2gb"
     volumes:
       - ./:/workspace
     deploy:

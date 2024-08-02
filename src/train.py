@@ -1,27 +1,32 @@
 import copy
 import os
+import sys
 import time
 import torch
 from torch.utils.data import DataLoader
-import ray
+from torch.multiprocessing import Queue, Process, set_start_method
 
-from agent import ModelAgent
 from bitboard import Stone
 from dataloader import PVDataset
 from match import self_play
 from models import PVNet
 from config import Config
+from process import ProcessPool
+
+try:
+    set_start_method("spawn")
+except RuntimeError:
+    pass
 
 
-def train():
-    ray.init(num_cpus=15, num_gpus=1)
-
+if __name__ == "__main__":
     cfg = Config(
-        warmup_games=3000,
-        warmup_mcts_simulation=40,
+        warmup_games=4000,
+        warmup_mcts_simulation=400,
+        num_processes=15,
         loops=10000,
-        games=200,
-        epochs=20,
+        games=400,
+        epochs=40,
         save_epochs=2,
         batch_size=512,
         # optimizer
@@ -29,8 +34,9 @@ def train():
         weight_decay=0.00001,
         # play
         switch_threshold=0.55,
-        mcts_simulation=100,
-        value_discount=0.95,
+        mcts_simulation=800,
+        random_begin=18,
+        value_discount=1.0,
         # history buffer
         data_length=500000,
         data_limit=510000,
@@ -45,60 +51,52 @@ def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if cfg.restart_epoch == 0:
-        origin_model = PVNet()
-
-        training_model = copy.deepcopy(origin_model).to(device)
-        training_optimizer = torch.optim.Adam(
-            training_model.parameters(),
+        model = PVNet().to(device)
+        optimizer = torch.optim.Adam(
+            model.parameters(),
             lr=cfg.lr,
             weight_decay=cfg.weight_decay,
         )
-
-        opponent_model = copy.deepcopy(origin_model).to(device)
-        opponent_optimizer = torch.optim.Adam(
-            opponent_model.parameters(),
-            lr=cfg.lr,
-            weight_decay=cfg.weight_decay,
-        )
+        generation = 0
 
     else:
         checkpoint = torch.load(cfg.load_checkpoint)
 
-        training_model = PVNet().to(device)
-        training_model.load_state_dict(checkpoint["train"])
+        model = PVNet().to(device)
+        model.load_state_dict(checkpoint["model"])
 
-        training_optimizer = torch.optim.Adam(
-            training_model.parameters(),
+        optimizer = torch.optim.Adam(
+            model.parameters(),
             lr=cfg.lr,
             weight_decay=cfg.weight_decay,
         )
-        training_optimizer.load_state_dict(checkpoint["train_optimizer"])
-
-        opponent_model = PVNet().to(device)
-        opponent_model.load_state_dict(checkpoint["opponent"])
-        opponent_optimizer = torch.optim.Adam(
-            opponent_model.parameters(),
-            lr=cfg.lr,
-            weight_decay=cfg.weight_decay,
-        )
-        opponent_optimizer.load_state_dict(checkpoint["opponent_optimizer"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        generation = checkpoint["generation"]
 
     policy_criterion = torch.nn.CrossEntropyLoss()
     value_criterion = torch.nn.MSELoss()
 
     # Self play process
-    training_weight = ray.put(training_model.cpu().state_dict())
-    opponent_weight = ray.put(opponent_model.cpu().state_dict())
+    training_weight = model.cpu().state_dict()
+    opponent_weight = model.cpu().state_dict()
 
-    working_self_play: list = [
-        self_play.remote(
-            training_weight,
-            opponent_weight,
-            Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-            cfg.warmup_mcts_simulation,
+    queue = Queue(maxsize=cfg.num_processes)
+
+    self_play_pool = ProcessPool()
+    for count in range(cfg.num_processes):
+        self_play_pool.add(
+            Process(
+                target=self_play,
+                args=(
+                    queue,
+                    training_weight,
+                    opponent_weight,
+                    Stone.BLACK if count % 2 == 0 else Stone.WHITE,
+                    cfg.warmup_mcts_simulation,
+                    cfg.random_begin,
+                ),
+            )
         )
-        for count in range(cfg.games)
-    ]
 
     # Warm up for dataset
     print("Warm up started ...")
@@ -106,23 +104,32 @@ def train():
     dataset = PVDataset(cfg.data_length, cfg.data_limit)
 
     for count in range(cfg.warmup_games):
-        fin, working_self_play = ray.wait(working_self_play, num_returns=1)
-        history, score = ray.get(fin[0])
-        dataset.add(history, score * cfg.value_discount)
-        print(f"    Game: {count}, Score: {score}")
+        self_play_pool.join_one()
+        history, score = queue.get()
+        print(f"Warmup game: {count}, {score}")
+        dataset.add(
+            copy.deepcopy(history),
+            copy.deepcopy(score) * cfg.value_discount,
+        )
+        del history, score
 
-        working_self_play.append(
-            self_play.remote(
-                training_weight,
-                opponent_weight,
-                Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                cfg.warmup_mcts_simulation,
-            )
+        self_play_pool.add(
+            Process(
+                target=self_play,
+                args=(
+                    queue,
+                    training_weight,
+                    opponent_weight,
+                    Stone.BLACK if count % 2 == 0 else Stone.WHITE,
+                    cfg.warmup_mcts_simulation,
+                    cfg.random_begin,
+                ),
+            ),
         )
 
     print("Warm up finished !!")
 
-    # Train loop
+    # Training loop
 
     loss_history = []
 
@@ -130,55 +137,59 @@ def train():
         lt = time.time()
         print(f"Loop: {loop}")
 
-        training_weight = ray.put(training_model.cpu().state_dict())
-        opponent_weight = ray.put(opponent_model.cpu().state_dict())
+        training_weight = model.cpu().state_dict()
 
         win = 0
         lose = 0
         for count in range(cfg.games):
-            fin, working_self_play = ray.wait(working_self_play, num_returns=1)
-            history, score = ray.get(fin[0])
-            dataset.add(history, score * cfg.value_discount)
+            self_play_pool.join_one()
+            history, score = queue.get()
             print(f"    Game: {count}, Score: {score}")
+            dataset.add(
+                copy.deepcopy(history),
+                copy.deepcopy(score) * cfg.value_discount,
+            )
 
             if score > 0:
                 win += 1
             elif score < 0:
                 lose += 1
 
-            working_self_play.append(
-                self_play.remote(
-                    training_weight,
-                    opponent_weight,
-                    Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                    cfg.mcts_simulation,
+            del history, score
+
+            self_play_pool.add(
+                Process(
+                    target=self_play,
+                    args=(
+                        queue,
+                        training_weight,
+                        opponent_weight,
+                        Stone.BLACK if count % 2 == 0 else Stone.WHITE,
+                        cfg.mcts_simulation,
+                        cfg.random_begin,
+                    ),
                 )
             )
 
+        print(f"    Result: win {win}, lose {lose}")
         if win / (win + lose) > cfg.switch_threshold:
-            training_model, opponent_model = (
-                opponent_model,
-                training_model,
-            )
-            training_optimizer, opponent_optimizer = (
-                opponent_optimizer,
-                training_optimizer,
-            )
-            print("    switched trainer !")
+            opponent_weight = model.cpu().state_dict()
+            generation += 1
+            print("    next generation !")
 
         dataloader = DataLoader(
             dataset,
             batch_size=cfg.batch_size,
             shuffle=True,
-            num_workers=10,
+            num_workers=0,
             pin_memory=True,
         )
 
-        training_model = training_model.to(device)
+        model = model.to(device)
 
         print(f"    using device : {device}")
 
-        training_model.train()
+        model.train()
         for epoch in range(cfg.epochs):
             et = time.time()
             print(f"    Epoch: {epoch}")
@@ -187,8 +198,8 @@ def train():
             for s, p, v in dataloader:
                 s, p, v = s.to(device), p.to(device), v.to(device)
 
-                training_optimizer.zero_grad()
-                p_hat, v_hat = training_model(s)
+                optimizer.zero_grad()
+                p_hat, v_hat = model(s)
 
                 p_loss = policy_criterion(p_hat, p)
                 v_loss = value_criterion(v_hat, v)
@@ -196,7 +207,7 @@ def train():
                 loss = p_loss + v_loss
 
                 loss.backward()
-                training_optimizer.step()
+                optimizer.step()
 
                 train_loss += loss.item()
 
@@ -212,15 +223,10 @@ def train():
                 os.makedirs("checkpoint")
             torch.save(
                 {
-                    "train": training_model.cpu().state_dict(),
-                    "train_optimizer": training_optimizer.state_dict(),
-                    "opponent": opponent_model.cpu().state_dict(),
-                    "opponent_optimizer": opponent_optimizer.state_dict(),
+                    "model": model.cpu().state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "generation": generation,
                     "loss_history": loss_history,
                 },
                 f"checkpoint/model_{loop}.pt",
             )
-
-
-if __name__ == "__main__":
-    train()

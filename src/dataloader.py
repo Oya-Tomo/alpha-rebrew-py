@@ -24,7 +24,7 @@ class PVDataset:
         for step in history:
             self.buffer.append(
                 PVItem(
-                    state=step.state,
+                    state=step.state.to_tensor(step.turn),
                     policy=torch.tensor(step.policy),
                     value=torch.tensor([score]),
                 ),

@@ -7,11 +7,29 @@ import math
 from bitboard import ACTION_COUNT, Board, Stone, flip
 
 
+def sigmoid(x: float, a: float):
+    return 1 / (1 + math.exp(-a * x))
+
+
+def logit(x: float, a: float):
+    return math.log(x / (1 - x)) / a
+
+
 # black win -> positive +
 # white win -> negative -
 # draw      -> 0
 def count_to_score(b: int, w: int) -> float:
-    return (b - w) / (b + w)
+    count_score = (b - w) / (b + w)
+    return sigmoid(count_score, 6) * 2 - 1
+
+
+def score_to_count(score: float) -> tuple[int, int]:
+    score_sigm = (score + 1) / 2
+    count_score = logit(score_sigm, 6)
+    diff = count_score * 64
+    b = 32 + diff / 2
+    w = 32 - diff / 2
+    return b, w
 
 
 class MCT:
@@ -154,3 +172,12 @@ class MCT:
             self.N[s][action] += 1
 
             return value
+
+
+if __name__ == "__main__":
+    b = 40
+    w = 24
+    score = count_to_score(b, w)
+    print(score)
+    b, w = score_to_count(score)
+    print(b, w)

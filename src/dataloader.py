@@ -12,12 +12,8 @@ class PVItem:
 
 
 class PVDataset:
-    def __init__(self, length: int, limit: int) -> None:
-        assert length < limit, "length must be less than limit."
-
+    def __init__(self, limit: int) -> None:
         self.buffer: list[PVItem] = []
-
-        self.length = length
         self.limit = limit
 
     def add(self, history: list[Step], score: float):
@@ -31,10 +27,14 @@ class PVDataset:
             )
 
         if len(self.buffer) > self.limit:
-            self.buffer = self.buffer[self.length :]
+            p = len(self.buffer) - self.limit
+            self.buffer = self.buffer[p:]
 
-    def enough_data(self):
-        return len(self.buffer) >= self.length * 0.95
+    def periodic_delete(self, n: int):
+        if len(self.buffer) > n:
+            self.buffer = self.buffer[n:]
+        else:
+            assert False, "buffer length will be 0 !!"
 
     def __getitem__(self, index: int):
         item = self.buffer[index]

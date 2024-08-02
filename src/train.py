@@ -2,231 +2,196 @@ import copy
 import os
 import sys
 import time
+from typing import Generator
 import torch
 from torch.utils.data import DataLoader
 from torch.multiprocessing import Queue, Process, set_start_method
+from tqdm import tqdm
 
+from agent import Step
 from bitboard import Stone
 from dataloader import PVDataset
 from match import self_play
 from models import PVNet
-from config import Config
-from process import ProcessPool
-
-try:
-    set_start_method("spawn")
-except RuntimeError:
-    pass
+from config import Config, DatasetConfig, GameConfig, SelfPlayConfig, TrainConfig
 
 
-if __name__ == "__main__":
-    cfg = Config(
-        warmup_games=4000,
-        warmup_mcts_simulation=400,
-        num_processes=15,
-        loops=10000,
-        games=400,
-        epochs=40,
-        save_epochs=2,
-        batch_size=512,
-        # optimizer
-        lr=0.02,
-        weight_decay=0.00001,
-        # play
-        switch_threshold=0.55,
-        mcts_simulation=800,
-        random_begin=18,
-        value_discount=1.0,
-        # history buffer
-        data_length=500000,
-        data_limit=510000,
-        restart_epoch=0,
-        load_checkpoint="",
+def self_play_loop(
+    config: SelfPlayConfig,
+    model: PVNet,
+    queue: Queue,
+) -> Generator[tuple[list[Step], float]]:  # yield (steps, score)
+    tasks: list[Process] = []
+    workers: list[Process] = []
+
+    model_weight = model.cpu().state_dict()
+
+    for game in config.games:
+        for i in range(game.count):
+            stone = Stone.BLACK if i % 2 == 0 else Stone.WHITE
+            task = Process(
+                target=self_play,
+                args=(queue, model_weight, model_weight, stone, game.random_start),
+            )
+            tasks.append(task)
+
+    for _ in range(config.num_processes):
+        process = tasks.pop(0)
+        process.start()
+        workers.append(process)
+
+    while len(workers) > 0:
+        joined = False
+        while True and joined is False:
+            for index in range(len(workers)):
+                if workers[index].exitcode is not None:
+                    workers[index].join()
+                    workers.pop(index)
+                    joined = True
+                    break
+
+        if len(tasks) > 0:
+            process = tasks.pop(0)
+            process.start()
+            workers.append(process)
+
+        history, score = queue.get()
+        yield history, score
+
+
+def train():
+    try:
+        set_start_method("spawn")
+    except RuntimeError:
+        pass
+
+    config = Config(
+        warmup_config=SelfPlayConfig(
+            num_processes=15,
+            games=[
+                GameConfig(count=500, random_start=0),
+                GameConfig(count=500, random_start=10),
+                GameConfig(count=500, random_start=20),
+                GameConfig(count=1000, random_start=30),
+                GameConfig(count=1000, random_start=40),
+                GameConfig(count=1000, random_start=50),
+            ],
+        ),
+        match_config=SelfPlayConfig(
+            num_processes=15,
+            games=[
+                GameConfig(count=50, random_start=0),
+                GameConfig(count=50, random_start=10),
+                GameConfig(count=50, random_start=20),
+                GameConfig(count=100, random_start=30),
+                GameConfig(count=100, random_start=40),
+                GameConfig(count=100, random_start=50),
+            ],
+        ),
+        dataset_config=DatasetConfig(
+            periodic_delete=2000,
+            limit_length=500000,
+        ),
+        train_config=TrainConfig(
+            loops=1000,
+            epochs=50,
+            save_epochs=2,
+            batch_size=512,
+            lr=0.005,
+            weight_decay=1e-6,
+            restart_epoch=0,
+            load_checkpoint="",
+        ),
     )
 
-    # Prepare
-
-    print("Prepare started ...")
-
+    queue = Queue(maxsize=20)
+    dataset = PVDataset(config.dataset_config.limit_length)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    if cfg.restart_epoch == 0:
+    if config.train_config.restart_epoch == 0:
         model = PVNet().to(device)
         optimizer = torch.optim.Adam(
             model.parameters(),
-            lr=cfg.lr,
-            weight_decay=cfg.weight_decay,
+            lr=config.train_config.lr,
+            weight_decay=config.train_config.weight_decay,
         )
-        generation = 0
-
     else:
-        checkpoint = torch.load(cfg.load_checkpoint)
-
+        checkpoint = torch.load(config.train_config.load_checkpoint)
         model = PVNet().to(device)
-        model.load_state_dict(checkpoint["model"])
 
+        model.load_state_dict(checkpoint["model"])
         optimizer = torch.optim.Adam(
             model.parameters(),
-            lr=cfg.lr,
-            weight_decay=cfg.weight_decay,
+            lr=config.train_config.lr,
+            weight_decay=config.train_config.weight_decay,
         )
         optimizer.load_state_dict(checkpoint["optimizer"])
-        generation = checkpoint["generation"]
 
-    policy_criterion = torch.nn.CrossEntropyLoss()
-    value_criterion = torch.nn.MSELoss()
+    print("Warmup Start")
 
-    # Self play process
-    training_weight = model.cpu().state_dict()
-    opponent_weight = model.cpu().state_dict()
+    for history, score in self_play_loop(config.warmup_config, model, queue):
+        dataset.add(history, score)
 
-    queue = Queue(maxsize=cfg.num_processes)
-
-    self_play_pool = ProcessPool()
-    for count in range(cfg.num_processes):
-        self_play_pool.add(
-            Process(
-                target=self_play,
-                args=(
-                    queue,
-                    training_weight,
-                    opponent_weight,
-                    Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                    cfg.warmup_mcts_simulation,
-                    cfg.random_begin,
-                ),
-            )
-        )
-
-    # Warm up for dataset
-    print("Warm up started ...")
-
-    dataset = PVDataset(cfg.data_length, cfg.data_limit)
-
-    for count in range(cfg.warmup_games):
-        self_play_pool.join_one()
-        history, score = queue.get()
-        print(f"Warmup game: {count}, {score}")
-        dataset.add(
-            copy.deepcopy(history),
-            copy.deepcopy(score) * cfg.value_discount,
-        )
-        del history, score
-
-        self_play_pool.add(
-            Process(
-                target=self_play,
-                args=(
-                    queue,
-                    training_weight,
-                    opponent_weight,
-                    Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                    cfg.warmup_mcts_simulation,
-                    cfg.random_begin,
-                ),
-            ),
-        )
-
-    print("Warm up finished !!")
-
-    # Training loop
+    print("Warmup Finish")
 
     loss_history = []
 
-    for loop in range(cfg.loops):
-        lt = time.time()
-        print(f"Loop: {loop}")
+    for loop in range(config.train_config.loops):
+        print(f"Loop {loop} Start")
 
-        training_weight = model.cpu().state_dict()
-
-        win = 0
-        lose = 0
-        for count in range(cfg.games):
-            self_play_pool.join_one()
-            history, score = queue.get()
-            print(f"    Game: {count}, Score: {score}")
-            dataset.add(
-                copy.deepcopy(history),
-                copy.deepcopy(score) * cfg.value_discount,
-            )
-
-            if score > 0:
-                win += 1
-            elif score < 0:
-                lose += 1
-
-            del history, score
-
-            self_play_pool.add(
-                Process(
-                    target=self_play,
-                    args=(
-                        queue,
-                        training_weight,
-                        opponent_weight,
-                        Stone.BLACK if count % 2 == 0 else Stone.WHITE,
-                        cfg.mcts_simulation,
-                        cfg.random_begin,
-                    ),
-                )
-            )
-
-        print(f"    Result: win {win}, lose {lose}")
-        if win / (win + lose) > cfg.switch_threshold:
-            opponent_weight = model.cpu().state_dict()
-            generation += 1
-            print("    next generation !")
+        dataset.periodic_delete(config.dataset_config.periodic_delete)
+        for history, score in self_play_loop(config.match_config, model, queue):
+            dataset.add(history, score)
+            print(f"    Score: {score}")
 
         dataloader = DataLoader(
             dataset,
-            batch_size=cfg.batch_size,
+            batch_size=config.train_config.batch_size,
             shuffle=True,
             num_workers=0,
             pin_memory=True,
         )
 
         model = model.to(device)
-
-        print(f"    using device : {device}")
-
         model.train()
-        for epoch in range(cfg.epochs):
-            et = time.time()
-            print(f"    Epoch: {epoch}")
 
-            train_loss = 0.0
-            for s, p, v in dataloader:
-                s, p, v = s.to(device), p.to(device), v.to(device)
+        with tqdm(range(config.train_config.epochs)) as pbar:
+            for epoch in pbar:
+                total_loss = 0
+                pbar.set_description(f"Epoch {epoch}")
+                pbar.set_postfix({"loss": total_loss / len(dataloader)})
 
-                optimizer.zero_grad()
-                p_hat, v_hat = model(s)
+                for state, policy, value in tqdm(dataloader):
+                    state = state.to(device)
+                    policy = policy.to(device)
+                    value = value.to(device)
 
-                p_loss = policy_criterion(p_hat, p)
-                v_loss = value_criterion(v_hat, v)
+                    optimizer.zero_grad()
 
-                loss = p_loss + v_loss
+                    policy_pred, value_pred = model(state)
+                    loss_policy = torch.nn.functional.cross_entropy(policy_pred, policy)
+                    loss_value = torch.nn.functional.mse_loss(value_pred, value)
+                    loss = loss_policy + loss_value
 
-                loss.backward()
-                optimizer.step()
+                    loss.backward()
+                    optimizer.step()
 
-                train_loss += loss.item()
+                    total_loss += loss.item()
+                loss_history.append(total_loss / len(dataloader))
 
-            print(f"    Loss: {train_loss / len(dataloader)}")
-            loss_history.append(train_loss / len(dataloader))
-
-            print(f"    Epoch Time: {time.time() - et}")
-
-        print(f"    Loop Time: {time.time() - lt}")
-
-        if loop % cfg.save_epochs == cfg.save_epochs - 1:
-            if not os.path.exists("checkpoint"):
-                os.makedirs("checkpoint")
+        if (
+            loop % config.train_config.save_epochs
+            == config.train_config.save_epochs - 1
+        ):
             torch.save(
                 {
-                    "model": model.cpu().state_dict(),
+                    "model": model.state_dict(),
                     "optimizer": optimizer.state_dict(),
-                    "generation": generation,
                     "loss_history": loss_history,
                 },
                 f"checkpoint/model_{loop}.pt",
             )
+
+
+if __name__ == "__main__":
+    train()

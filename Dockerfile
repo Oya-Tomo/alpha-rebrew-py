@@ -8,7 +8,7 @@ RUN apt install vim \
         python3-pip \
         -y
 
-RUN pip3 install torch torchvision numpy ray
+RUN pip3 install torch torchvision numpy ray tqdm
 
 WORKDIR /workspace
 

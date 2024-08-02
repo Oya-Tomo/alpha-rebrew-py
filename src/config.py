@@ -2,28 +2,41 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Config:
-    warmup_games: int
-    warmup_mcts_simulation: int
+class GameConfig:
+    count: int
+    random_start: int  # random moves at the beginning
 
+
+@dataclass
+class SelfPlayConfig:
     num_processes: int
+    games: list[GameConfig]
+    mcts_num: int
 
+
+@dataclass
+class DatasetConfig:
+    periodic_delete: int
+    limit_length: int
+
+
+@dataclass
+class TrainConfig:
     loops: int
-    games: int
     epochs: int
-    save_epochs: int  # spoch / save
+    save_epochs: int
 
     batch_size: int
     lr: float
     weight_decay: float
 
-    switch_threshold: float  # win rate
-    mcts_simulation: int  # mcts simulation count
-    random_begin: int
-    value_discount: float  # value discount rate
+    restart_epoch: int
+    load_checkpoint: str
 
-    data_length: int
-    data_limit: int
 
-    restart_epoch: int  # 0: start from 0
-    load_checkpoint: str  # if restart_epoch > 0, it will be loaded.
+@dataclass
+class Config:
+    warmup_config: SelfPlayConfig
+    match_config: SelfPlayConfig
+    dataset_config: DatasetConfig
+    train_config: TrainConfig

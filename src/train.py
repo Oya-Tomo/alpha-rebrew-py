@@ -23,7 +23,7 @@ def self_play_loop(
     config: SelfPlayConfig,
     model: PVNet,
     queue: Queue,
-) -> Generator[tuple[list[Step], float]]:  # yield (steps, score)
+) -> Generator[tuple[list[Step], float], None, None]:  # yield (steps, score)
     tasks: list[Process] = []
     workers: list[Process] = []
 
@@ -102,6 +102,7 @@ def train():
 
     for history, score in self_play_loop(config.warmup_config, model, queue):
         dataset.add(history, score)
+        print(f"    Score: {score}")
 
     print("Warmup Finish")
 

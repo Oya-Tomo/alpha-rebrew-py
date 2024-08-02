@@ -155,6 +155,8 @@ def train():
             loop % config.train_config.save_epochs
             == config.train_config.save_epochs - 1
         ):
+            if not os.path.exists("checkpoint"):
+                os.makedirs("checkpoint")
             torch.save(
                 {
                     "model": model.state_dict(),

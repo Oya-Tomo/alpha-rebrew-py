@@ -110,13 +110,13 @@ debug_config = Config(
         mcts_num=4,
     ),
     dataset_config=DatasetConfig(
-        periodic_delete=2000,
-        limit_length=500000,
+        periodic_delete=10,
+        limit_length=200,
     ),
     train_config=TrainConfig(
         loops=1000,
-        epochs=50,
-        save_epochs=2,
+        epochs=5,
+        save_epochs=100,
         batch_size=512,
         lr=0.005,
         weight_decay=1e-6,

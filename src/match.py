@@ -1,9 +1,29 @@
+import random
 import torch
 from torch.multiprocessing import Queue
 from bitboard import Board, Stone, flip
 from agent import ModelAgent, Step
 from mcts import MCT, count_to_score
 from models import PVNet
+
+
+def generate_random_board(random_start: int) -> tuple[Board, Stone]:
+    while True:
+        board = Board()
+        turn = Stone.BLACK
+
+        for _ in range(random_start):
+            if board.is_over():
+                break
+            actions = board.get_actions(turn)
+            action = random.choice(actions)
+            board.act(turn, action)
+            turn = flip(turn)
+
+        if not board.is_over():
+            break
+
+    return board, turn
 
 
 def self_play(
@@ -21,31 +41,18 @@ def self_play(
         training_weight if trainer == Stone.BLACK else opponent_weight
     )
     black_model = black_model.to(device)
-    black_mct = MCT(black_model, 0.35, 0.1)
-    black_agent = ModelAgent(Stone.BLACK, black_mct, mcts_num, 0.01)
+    black_mct = MCT(black_model, 0.9, 0.2)
+    black_agent = ModelAgent(Stone.BLACK, black_mct, mcts_num)
 
     white_model = PVNet()
     white_model.load_state_dict(
         training_weight if trainer == Stone.WHITE else opponent_weight
     )
     white_model = white_model.to(device)
-    white_mct = MCT(white_model, 0.35, 0.1)
-    white_agent = ModelAgent(Stone.WHITE, white_mct, mcts_num, 0.01)
+    white_mct = MCT(white_model, 0.9, 0.2)
+    white_agent = ModelAgent(Stone.WHITE, white_mct, mcts_num)
 
-    board = Board()
-    turn = Stone.BLACK
-
-    for _ in range(random_start):
-        if board.is_over():
-            break
-
-        if turn == Stone.BLACK:
-            action = black_agent.act_random(board)
-        else:
-            action = white_agent.act_random(board)
-
-        board.act(turn, action)
-        turn = flip(turn)
+    board, turn = generate_random_board(random_start)
 
     while not board.is_over():
         if turn == Stone.BLACK:

@@ -1,5 +1,6 @@
 import copy
 import os
+import pprint
 import sys
 import time
 from typing import Generator
@@ -127,13 +128,20 @@ def train():
         model = model.to(device)
         model.train()
 
-        with tqdm(range(config.train_config.epochs)) as pbar:
+        with tqdm(
+            range(config.train_config.epochs),
+            bar_format="{l_bar}{bar:40}{r_bar}{bar:-10b}",
+        ) as pbar:
+            epoch_loss_history = []
             for epoch in pbar:
                 total_loss = 0
                 pbar.set_description(f"Epoch {epoch}")
-                pbar.set_postfix({"loss": total_loss / len(dataloader)})
 
-                for state, policy, value in tqdm(dataloader):
+                for state, policy, value in tqdm(
+                    dataloader,
+                    bar_format="{l_bar}{bar:40}{r_bar}{bar:-10b}",
+                    leave=False,
+                ):
                     state = state.to(device)
                     policy = policy.to(device)
                     value = value.to(device)
@@ -149,7 +157,12 @@ def train():
                     optimizer.step()
 
                     total_loss += loss.item()
+                epoch_loss_history.append(total_loss / len(dataloader))
                 loss_history.append(total_loss / len(dataloader))
+                pbar.set_postfix({"loss": total_loss / len(dataloader)})
+
+            print("loss in epoch")
+            pprint.pprint(epoch_loss_history)
 
         if (
             loop % config.train_config.save_epochs

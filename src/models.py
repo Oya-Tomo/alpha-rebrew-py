@@ -6,37 +6,33 @@ class PVNet(nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
-        self.input_layer = nn.Sequential(
-            nn.Conv2d(3, 256, kernel_size=1, padding=0),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-        )
-
         self.res_blocks = nn.Sequential(
-            ResBlock(256, 256, 128),
-            ResBlock(128, 128, 64),
+            ResBlock(3, 128, 128),
+            ResBlock(128, 256, 256),
+            ResBlock(256, 512, 512),
         )
 
         self.policy_output = nn.Sequential(
-            nn.Conv2d(64, 4, kernel_size=1, padding=0),
-            nn.BatchNorm2d(4),
+            nn.Conv2d(512, 65, kernel_size=3, padding=1),
+            nn.BatchNorm2d(65),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(4 * 8 * 8, 65),
+            nn.Linear(65 * 8 * 8, 65),
             nn.Softmax(dim=1),
         )
 
         self.value_output = nn.Sequential(
-            nn.Conv2d(64, 1, kernel_size=1, padding=0),
-            nn.BatchNorm2d(1),
+            nn.Conv2d(512, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(64, 1),
+            nn.Linear(64 * 8 * 8, 512),
+            nn.ReLU(),
+            nn.Linear(512, 1),
             nn.Tanh(),
         )
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        x = self.input_layer(x)
         x = self.res_blocks(x)
         policy = self.policy_output(x.clone())
         value = self.value_output(x)

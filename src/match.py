@@ -11,8 +11,8 @@ def self_play(
     training_weight,
     opponent_weight,
     trainer: Stone,
-    sim: int,
-    random_begin: int,
+    mcts_num: int,
+    random_start: int,
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -22,7 +22,7 @@ def self_play(
     )
     black_model = black_model.to(device)
     black_mct = MCT(black_model, 0.35, 0.1)
-    black_agent = ModelAgent(Stone.BLACK, black_mct, sim, 0.01)
+    black_agent = ModelAgent(Stone.BLACK, black_mct, mcts_num, 0.01)
 
     white_model = PVNet()
     white_model.load_state_dict(
@@ -30,12 +30,12 @@ def self_play(
     )
     white_model = white_model.to(device)
     white_mct = MCT(white_model, 0.35, 0.1)
-    white_agent = ModelAgent(Stone.WHITE, white_mct, sim, 0.01)
+    white_agent = ModelAgent(Stone.WHITE, white_mct, mcts_num, 0.01)
 
     board = Board()
     turn = Stone.BLACK
 
-    for _ in range(random_begin):
+    for _ in range(random_start):
         if board.is_over():
             break
 

@@ -40,3 +40,89 @@ class Config:
     match_config: SelfPlayConfig
     dataset_config: DatasetConfig
     train_config: TrainConfig
+
+
+train_config = Config(
+    warmup_config=SelfPlayConfig(
+        num_processes=15,
+        games=[
+            GameConfig(count=500, random_start=0),
+            GameConfig(count=500, random_start=10),
+            GameConfig(count=500, random_start=20),
+            GameConfig(count=1000, random_start=30),
+            GameConfig(count=1000, random_start=40),
+            GameConfig(count=1000, random_start=50),
+        ],
+        mcts_num=400,
+    ),
+    match_config=SelfPlayConfig(
+        num_processes=15,
+        games=[
+            GameConfig(count=50, random_start=0),
+            GameConfig(count=50, random_start=10),
+            GameConfig(count=50, random_start=20),
+            GameConfig(count=100, random_start=30),
+            GameConfig(count=100, random_start=40),
+            GameConfig(count=100, random_start=50),
+        ],
+        mcts_num=800,
+    ),
+    dataset_config=DatasetConfig(
+        periodic_delete=2000,
+        limit_length=500000,
+    ),
+    train_config=TrainConfig(
+        loops=1000,
+        epochs=50,
+        save_epochs=2,
+        batch_size=512,
+        lr=0.005,
+        weight_decay=1e-6,
+        restart_epoch=0,
+        load_checkpoint="",
+    ),
+)
+
+
+debug_config = Config(
+    warmup_config=SelfPlayConfig(
+        num_processes=15,
+        games=[
+            GameConfig(count=2, random_start=0),
+            GameConfig(count=2, random_start=10),
+            GameConfig(count=2, random_start=20),
+            GameConfig(count=3, random_start=30),
+            GameConfig(count=3, random_start=40),
+            GameConfig(count=3, random_start=50),
+        ],
+        mcts_num=4,
+    ),
+    match_config=SelfPlayConfig(
+        num_processes=15,
+        games=[
+            GameConfig(count=2, random_start=0),
+            GameConfig(count=2, random_start=10),
+            GameConfig(count=2, random_start=20),
+            GameConfig(count=3, random_start=30),
+            GameConfig(count=3, random_start=40),
+            GameConfig(count=3, random_start=50),
+        ],
+        mcts_num=4,
+    ),
+    dataset_config=DatasetConfig(
+        periodic_delete=2000,
+        limit_length=500000,
+    ),
+    train_config=TrainConfig(
+        loops=1000,
+        epochs=50,
+        save_epochs=2,
+        batch_size=512,
+        lr=0.005,
+        weight_decay=1e-6,
+        restart_epoch=0,
+        load_checkpoint="",
+    ),
+)
+
+config = debug_config  # export config

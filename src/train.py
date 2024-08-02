@@ -13,7 +13,10 @@ from bitboard import Stone
 from dataloader import PVDataset
 from match import self_play
 from models import PVNet
-from config import Config, DatasetConfig, GameConfig, SelfPlayConfig, TrainConfig
+from config import (
+    SelfPlayConfig,
+    config,
+)
 
 
 def self_play_loop(
@@ -31,7 +34,14 @@ def self_play_loop(
             stone = Stone.BLACK if i % 2 == 0 else Stone.WHITE
             task = Process(
                 target=self_play,
-                args=(queue, model_weight, model_weight, stone, game.random_start),
+                args=(
+                    queue,
+                    model_weight,
+                    model_weight,
+                    stone,
+                    config.mcts_num,
+                    game.random_start,
+                ),
             )
             tasks.append(task)
 
@@ -64,45 +74,6 @@ def train():
         set_start_method("spawn")
     except RuntimeError:
         pass
-
-    config = Config(
-        warmup_config=SelfPlayConfig(
-            num_processes=15,
-            games=[
-                GameConfig(count=500, random_start=0),
-                GameConfig(count=500, random_start=10),
-                GameConfig(count=500, random_start=20),
-                GameConfig(count=1000, random_start=30),
-                GameConfig(count=1000, random_start=40),
-                GameConfig(count=1000, random_start=50),
-            ],
-        ),
-        match_config=SelfPlayConfig(
-            num_processes=15,
-            games=[
-                GameConfig(count=50, random_start=0),
-                GameConfig(count=50, random_start=10),
-                GameConfig(count=50, random_start=20),
-                GameConfig(count=100, random_start=30),
-                GameConfig(count=100, random_start=40),
-                GameConfig(count=100, random_start=50),
-            ],
-        ),
-        dataset_config=DatasetConfig(
-            periodic_delete=2000,
-            limit_length=500000,
-        ),
-        train_config=TrainConfig(
-            loops=1000,
-            epochs=50,
-            save_epochs=2,
-            batch_size=512,
-            lr=0.005,
-            weight_decay=1e-6,
-            restart_epoch=0,
-            load_checkpoint="",
-        ),
-    )
 
     queue = Queue(maxsize=20)
     dataset = PVDataset(config.dataset_config.limit_length)

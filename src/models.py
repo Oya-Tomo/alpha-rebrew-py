@@ -18,6 +18,7 @@ class PVNet(nn.Module):
             nn.ReLU(),
             nn.Flatten(),
             nn.Linear(65 * 8 * 8, 65),
+            nn.ReLU(),
             nn.Softmax(dim=1),
         )
 
@@ -45,9 +46,6 @@ class ResBlock(nn.Module):
 
         self.layers = nn.Sequential(
             nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1),
-            nn.BatchNorm2d(mid_channels),
-            nn.ReLU(),
-            nn.Conv2d(mid_channels, mid_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(mid_channels),
             nn.ReLU(),
             nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1),

@@ -4,25 +4,24 @@ from dataclasses import dataclass
 from agent import Step
 
 
-@dataclass
-class PVItem:
-    state: torch.Tensor
-    policy: torch.Tensor
-    value: torch.Tensor
-
-
 class PVDataset:
     def __init__(self, limit: int) -> None:
-        self.buffer: list[PVItem] = []
+        self.buffer: list[
+            tuple[
+                torch.Tensor,
+                torch.Tensor,
+                torch.Tensor,
+            ]
+        ] = []
         self.limit = limit
 
     def add(self, history: list[Step], score: float):
         for step in history:
             self.buffer.append(
-                PVItem(
-                    state=step.state.to_tensor(step.turn),
-                    policy=torch.tensor(step.policy),
-                    value=torch.tensor([score]),
+                (
+                    step.state.to_tensor(step.turn),
+                    torch.tensor(step.policy),
+                    torch.tensor([score]),
                 ),
             )
 
@@ -37,12 +36,16 @@ class PVDataset:
             assert False, "buffer length will be 0 !!"
 
     def __getitem__(self, index: int):
-        item = self.buffer[index]
-        return (
-            item.state,
-            item.policy,
-            item.value,
-        )
+        return self.buffer[index]
 
     def __len__(self):
         return len(self.buffer)
+
+    def state_dict(self):
+        return {
+            "buffer": self.buffer,
+        }
+
+    def load_state_dict(self, state_dict):
+        self.buffer = state_dict["buffer"]
+        return self

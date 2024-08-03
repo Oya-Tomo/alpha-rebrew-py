@@ -1,3 +1,4 @@
+import random
 import time
 import torch
 import numpy as np
@@ -92,5 +93,48 @@ def manual_match(tester: Stone):
     show_value_graph(value_history)
 
 
+def random_match(tester: Stone):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    board = Board()
+    model = PVNet()
+    model.load_state_dict(torch.load("checkpoint/model_3.pt")["model"])
+    model = model.to(device)
+
+    mct = MCT(model, 100, 0.01)
+    agent = ModelAgent(flip(tester), mct, 500)
+
+    model.eval()
+
+    turn = Stone.BLACK
+
+    value_history = []
+
+    while not board.is_over():
+        print(board)
+        actions = board.get_actions(turn)
+
+        _, value = model(board.to_tensor(turn).unsqueeze(0).to(device))
+        diff = predict_end_result(value.item(), turn)
+        value_history.append(diff)
+
+        if actions == [64]:
+            turn = flip(turn)
+            continue
+
+        if turn == tester:
+            action = random.choice(actions)
+        else:
+            t = time.time()
+            action = agent.act(board)
+            print(f"Time: {time.time() - t:.2f}s")
+
+        board.act(turn, action)
+        turn = flip(turn)
+
+    print(board)
+
+    show_value_graph(value_history)
+
+
 if __name__ == "__main__":
-    manual_match(Stone.BLACK)
+    random_match(Stone.WHITE)

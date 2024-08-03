@@ -73,6 +73,9 @@ def self_play(
 
 
 if __name__ == "__main__":
+    b, t = generate_random_board(50)
+    print(b)
+
     from multiprocessing import Process
 
     queue = Queue(maxsize=20)
@@ -91,8 +94,8 @@ if __name__ == "__main__":
                 training_weight,
                 opponent_weight,
                 Stone.BLACK,
-                10,
-                10,
+                800,
+                40,
             ),
         )
         p.start()

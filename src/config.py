@@ -33,6 +33,9 @@ class TrainConfig:
     restart_epoch: int
     load_checkpoint: str
 
+    save_dataset: str | None
+    load_dataset: str | None
+
 
 @dataclass
 class Config:
@@ -44,7 +47,7 @@ class Config:
 
 train_config = Config(
     warmup_config=SelfPlayConfig(
-        num_processes=15,
+        num_processes=12,
         games=[
             GameConfig(count=500, random_start=0),
             GameConfig(count=500, random_start=10),
@@ -80,13 +83,15 @@ train_config = Config(
         weight_decay=1e-6,
         restart_epoch=0,
         load_checkpoint="",
+        save_dataset="checkpoint/dataset.pt",
+        load_dataset=None,
     ),
 )
 
 
 debug_config = Config(
     warmup_config=SelfPlayConfig(
-        num_processes=15,
+        num_processes=12,
         games=[
             GameConfig(count=2, random_start=0),
             GameConfig(count=2, random_start=10),
@@ -122,6 +127,8 @@ debug_config = Config(
         weight_decay=1e-6,
         restart_epoch=0,
         load_checkpoint="",
+        save_dataset=None,
+        load_dataset=None,
     ),
 )
 

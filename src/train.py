@@ -101,12 +101,22 @@ def train():
 
     print("Warmup Start")
 
-    for i, res in enumerate(self_play_loop(config.warmup_config, model, queue)):
-        history, score = res
-        dataset.add(history, score)
-        print(f"    Game {i} Score: {score}")
+    if config.train_config.load_dataset is not None:
+        print("Load Dataset")
+        dataset.load_state_dict(torch.load(config.train_config.load_dataset))
+    else:
+        for i, res in enumerate(self_play_loop(config.warmup_config, model, queue)):
+            history, score = res
+            dataset.add(history, score)
+            print(f"    Game {i} Score: {score}")
 
     print("Warmup Finish")
+
+    if config.train_config.save_dataset is not None:
+        print("Save Dataset")
+        if not os.path.exists("checkpoint"):
+            os.makedirs("checkpoint")
+        torch.save(dataset.state_dict(), config.train_config.save_dataset)
 
     loss_history = []
 

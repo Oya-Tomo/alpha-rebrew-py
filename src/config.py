@@ -51,15 +51,15 @@ train_config = Config(
         games=[
             GameConfig(count=500, random_start=0),
             GameConfig(count=500, random_start=10),
-            GameConfig(count=500, random_start=20),
+            GameConfig(count=1000, random_start=20),
             GameConfig(count=1000, random_start=30),
             GameConfig(count=1000, random_start=40),
             GameConfig(count=1000, random_start=50),
         ],
-        mcts_num=400,
+        mcts_num=800,
     ),
     match_config=SelfPlayConfig(
-        num_processes=15,
+        num_processes=12,
         games=[
             GameConfig(count=50, random_start=0),
             GameConfig(count=50, random_start=10),

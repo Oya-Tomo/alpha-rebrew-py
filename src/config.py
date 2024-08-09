@@ -19,7 +19,7 @@ class GameConfig:
 @dataclass
 class SelfPlayConfig:
     num_processes: int
-    games: list[GameConfig]
+    game_config: list[GameConfig]
     mcts_config: MCTSConfig
 
 
@@ -57,7 +57,7 @@ class Config:
 train_config = Config(
     warmup_config=SelfPlayConfig(
         num_processes=12,
-        games=[
+        game_config=[
             GameConfig(count=500, random_start=0),
             GameConfig(count=500, random_start=10),
             GameConfig(count=1000, random_start=20),
@@ -75,7 +75,7 @@ train_config = Config(
     ),
     match_config=SelfPlayConfig(
         num_processes=12,
-        games=[
+        game_config=[
             GameConfig(count=50, random_start=0),
             GameConfig(count=50, random_start=10),
             GameConfig(count=50, random_start=20),
@@ -113,7 +113,7 @@ train_config = Config(
 debug_config = Config(
     warmup_config=SelfPlayConfig(
         num_processes=12,
-        games=[
+        game_config=[
             GameConfig(count=2, random_start=0),
             GameConfig(count=2, random_start=10),
             GameConfig(count=2, random_start=20),
@@ -131,7 +131,7 @@ debug_config = Config(
     ),
     match_config=SelfPlayConfig(
         num_processes=15,
-        games=[
+        game_config=[
             GameConfig(count=2, random_start=0),
             GameConfig(count=2, random_start=10),
             GameConfig(count=2, random_start=20),

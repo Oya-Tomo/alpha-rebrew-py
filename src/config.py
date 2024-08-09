@@ -121,8 +121,8 @@ debug_config = Config(
             GameConfig(count=3, random_start=40),
             GameConfig(count=3, random_start=50),
         ],
-        mcts_num=4,
         mcts_config=MCTSConfig(
+            simulation=10,
             dirichlet_alpha=0.9,
             dirichlet_frac=0.2,
             c_init=1.25,
@@ -139,8 +139,8 @@ debug_config = Config(
             GameConfig(count=3, random_start=40),
             GameConfig(count=3, random_start=50),
         ],
-        mcts_num=4,
         mcts_config=MCTSConfig(
+            simulation=10,
             dirichlet_alpha=0.9,
             dirichlet_frac=0.2,
             c_init=1.25,

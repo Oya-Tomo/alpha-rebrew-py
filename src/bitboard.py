@@ -257,6 +257,8 @@ if __name__ == "__main__":
         kifu = "f5d6c3d3c4f4c5b3c2e6c6b4b5d2f7c7b6a6d8a7a3a5b2e3a4d7a8f3b7c1g4e7e8a1f8g6g5f6h5h3h4g3g7a2e2h6h7d1b1h8g8c8f1f2g1e1h2h1g2b8"
         kifu_actions = kifu_to_actions(kifu)
 
+        print("Kifu: ", kifu_actions)
+
         i = 0
 
         turn = Stone.BLACK
@@ -264,6 +266,9 @@ if __name__ == "__main__":
         while not board.is_over():
             print(board)
             actions = board.get_actions(turn)
+            print("Actions: ", actions)
+            print("black: ", board.black_actions)
+            print("white: ", board.white_actions)
 
             if actions == [64]:
                 board.act(turn, 64)

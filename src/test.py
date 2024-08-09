@@ -48,11 +48,11 @@ def manual_match(tester: Stone):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     board = Board()
     model = PVNet()
-    model.load_state_dict(torch.load("checkpoint/model_29.pt")["model"])
+    model.load_state_dict(torch.load("checkpoint/model_67.pt")["model"])
     model = model.to(device)
 
-    mct = MCT(model, 0.01, 0.01)
-    agent = ModelAgent(flip(tester), mct, 1000, 0)
+    mct = MCT(model, 100, 0.0001)
+    agent = ModelAgent(flip(tester), mct, 1000)
 
     model.eval()
 
@@ -97,11 +97,11 @@ def random_match(tester: Stone):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     board = Board()
     model = PVNet()
-    model.load_state_dict(torch.load("checkpoint/model_3.pt")["model"])
+    model.load_state_dict(torch.load("checkpoint/model_21.pt")["model"])
     model = model.to(device)
 
     mct = MCT(model, 100, 0.01)
-    agent = ModelAgent(flip(tester), mct, 500)
+    agent = ModelAgent(flip(tester), mct, 1000)
 
     model.eval()
 
@@ -137,4 +137,4 @@ def random_match(tester: Stone):
 
 
 if __name__ == "__main__":
-    random_match(Stone.WHITE)
+    manual_match(Stone.BLACK)

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class MCTSConfig:
+    simulation: int
     dirichlet_alpha: float
     dirichlet_frac: float
     c_init: float
@@ -19,7 +20,6 @@ class GameConfig:
 class SelfPlayConfig:
     num_processes: int
     games: list[GameConfig]
-    mcts_num: int
     mcts_config: MCTSConfig
 
 
@@ -65,8 +65,8 @@ train_config = Config(
             GameConfig(count=1000, random_start=40),
             GameConfig(count=1000, random_start=50),
         ],
-        mcts_num=800,
         mcts_config=MCTSConfig(
+            simulation=800,
             dirichlet_alpha=0.9,
             dirichlet_frac=0.2,
             c_init=1.25,
@@ -83,8 +83,8 @@ train_config = Config(
             GameConfig(count=100, random_start=40),
             GameConfig(count=100, random_start=50),
         ],
-        mcts_num=800,
         mcts_config=MCTSConfig(
+            simulation=800,
             dirichlet_alpha=0.9,
             dirichlet_frac=0.2,
             c_init=1.25,

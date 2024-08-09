@@ -104,6 +104,7 @@ def train():
     if config.train_config.load_dataset is not None:
         print("Load Dataset")
         dataset.load_state_dict(torch.load(config.train_config.load_dataset))
+        print(f"Dataset Length: {len(dataset)}")
     else:
         for i, res in enumerate(self_play_loop(config.warmup_config, model, queue)):
             history, score = res

@@ -36,8 +36,10 @@ class MCT:
     def __init__(
         self,
         model: torch.nn.Module,
-        dirichlet_alpha: float,
-        dirichlet_frac: float,
+        dirichlet_alpha: float = 10.0,
+        dirichlet_frac: float = 0.2,
+        c_base: float = 19652,
+        c_init: float = 1.25,
     ) -> None:
         self.model = model
         self.device = next(model.parameters()).device
@@ -45,8 +47,8 @@ class MCT:
         self.dirichlet_alpha = dirichlet_alpha
         self.dirichlet_frac = dirichlet_frac
 
-        self.c_base = 19652
-        self.c_init = 1.25
+        self.c_base = c_base
+        self.c_init = c_init
         # ref: https://tadaoyamaoka.hatenablog.com/entry/2018/12/08/191619
 
         self.P: dict[int, list[float]] = {}  # prior probability

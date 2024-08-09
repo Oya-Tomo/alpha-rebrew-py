@@ -5,6 +5,7 @@ import numpy as np
 import math
 
 from bitboard import ACTION_COUNT, Board, Stone, flip
+from config import MCTSConfig
 
 
 def sigmoid(x: float, a: float):
@@ -36,19 +37,16 @@ class MCT:
     def __init__(
         self,
         model: torch.nn.Module,
-        dirichlet_alpha: float = 10.0,
-        dirichlet_frac: float = 0.2,
-        c_base: float = 19652,
-        c_init: float = 1.25,
+        config: MCTSConfig,
     ) -> None:
         self.model = model
         self.device = next(model.parameters()).device
 
-        self.dirichlet_alpha = dirichlet_alpha
-        self.dirichlet_frac = dirichlet_frac
+        self.dirichlet_alpha = config.dirichlet_alpha
+        self.dirichlet_frac = config.dirichlet_frac
 
-        self.c_base = c_base
-        self.c_init = c_init
+        self.c_base = config.c_base
+        self.c_init = config.c_init
         # ref: https://tadaoyamaoka.hatenablog.com/entry/2018/12/08/191619
 
         self.P: dict[int, list[float]] = {}  # prior probability

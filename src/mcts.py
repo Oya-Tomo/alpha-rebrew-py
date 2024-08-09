@@ -49,6 +49,8 @@ class MCT:
         self.c_init = config.c_init
         # ref: https://tadaoyamaoka.hatenablog.com/entry/2018/12/08/191619
 
+        self.simulation = config.simulation
+
         self.P: dict[int, list[float]] = {}  # prior probability
 
         self.N: dict[int, list[int]] = {}  # action visit count
@@ -59,7 +61,7 @@ class MCT:
     def _c_puct(self, s: int):
         return math.log((1 + sum(self.N[s]) + self.c_base) / self.c_base) + self.c_init
 
-    def search(self, state: Board, turn: Stone, sim: int):
+    def search(self, state: Board, turn: Stone):
         s = state.to_key(turn)
 
         if not (s in self.P):
@@ -75,7 +77,7 @@ class MCT:
                 self.dirichlet_frac * noise + (1 - self.dirichlet_frac) * self.P[s][a]
             )
 
-        for _ in range(sim):
+        for _ in range(self.simulation):
             U = [
                 self._c_puct(s)
                 * self.P[s][a]

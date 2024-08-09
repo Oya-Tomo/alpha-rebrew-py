@@ -107,9 +107,10 @@ def train():
         print(f"Dataset Length: {len(dataset)}")
     else:
         for i, res in enumerate(self_play_loop(config.warmup_config, model, queue)):
-            history, score = res
-            dataset.add(history, score)
-            print(f"    Game {i} Score: {score}")
+            black_history, black_score, white_history, white_score = res
+            dataset.add(black_history, black_score)
+            dataset.add(white_history, white_score)
+            print(f"    Game {i} Score: {black_score}")
 
     print("Warmup Finish")
 
@@ -126,9 +127,10 @@ def train():
 
         dataset.periodic_delete(config.dataset_config.periodic_delete)
         for i, res in enumerate(self_play_loop(config.match_config, model, queue)):
-            history, score = res
-            dataset.add(history, score)
-            print(f"    Game {i} Score: {score}")
+            black_history, black_score, white_history, white_score = res
+            dataset.add(black_history, black_score)
+            dataset.add(white_history, white_score)
+            print(f"    Game {i} Score: {black_score}")
 
         dataloader = DataLoader(
             dataset,

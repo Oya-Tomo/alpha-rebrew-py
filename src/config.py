@@ -58,12 +58,12 @@ train_config = Config(
     warmup_config=SelfPlayConfig(
         num_processes=12,
         game_config=[
-            GameConfig(count=500, random_start=0),
-            GameConfig(count=500, random_start=10),
-            GameConfig(count=1000, random_start=20),
-            GameConfig(count=1000, random_start=30),
-            GameConfig(count=1000, random_start=40),
-            GameConfig(count=1000, random_start=50),
+            GameConfig(count=1000, random_start=0),
+            GameConfig(count=1000, random_start=10),
+            GameConfig(count=2000, random_start=20),
+            GameConfig(count=2000, random_start=30),
+            GameConfig(count=2000, random_start=40),
+            GameConfig(count=2000, random_start=50),
         ],
         mcts_config=MCTSConfig(
             simulation=800,
@@ -104,8 +104,8 @@ train_config = Config(
         weight_decay=1e-6,
         restart_epoch=0,
         load_checkpoint="",
-        save_dataset=None,
-        load_dataset="checkpoint/dataset.pt",
+        save_dataset="checkpoint/dataset.pt",
+        load_dataset=None,
     ),
 )
 

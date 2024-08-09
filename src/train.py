@@ -24,23 +24,23 @@ def self_play_loop(
     config: SelfPlayConfig,
     model: PVNet,
     queue: Queue,
-) -> Generator[tuple[list[Step], float], None, None]:  # yield (steps, score)
+) -> Generator[
+    tuple[list[Step], float, list[Step], float], None, None
+]:  # yield (steps, score, steps, score)
     tasks: list[Process] = []
     workers: list[Process] = []
 
     model_weight = model.cpu().state_dict()
 
-    for game in config.games:
+    for game in config.game_config:
         for i in range(game.count):
-            stone = Stone.BLACK if i % 2 == 0 else Stone.WHITE
             task = Process(
                 target=self_play,
                 args=(
                     queue,
                     model_weight,
                     model_weight,
-                    stone,
-                    config.mcts_num,
+                    config.mcts_config,
                     game.random_start,
                 ),
             )
@@ -66,8 +66,8 @@ def self_play_loop(
             process.start()
             workers.append(process)
 
-        history, score = queue.get()
-        yield history, score
+        black_history, black_score, white_history, white_score = queue.get()
+        yield black_history, black_score, white_history, white_score
 
 
 def train():

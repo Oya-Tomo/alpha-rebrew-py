@@ -2,6 +2,14 @@ from dataclasses import dataclass
 
 
 @dataclass
+class MCTSConfig:
+    dirichlet_alpha: float
+    dirichlet_frac: float
+    c_init: float
+    c_base: float
+
+
+@dataclass
 class GameConfig:
     count: int
     random_start: int  # random moves at the beginning
@@ -12,6 +20,7 @@ class SelfPlayConfig:
     num_processes: int
     games: list[GameConfig]
     mcts_num: int
+    mcts_config: MCTSConfig
 
 
 @dataclass
@@ -57,6 +66,12 @@ train_config = Config(
             GameConfig(count=1000, random_start=50),
         ],
         mcts_num=800,
+        mcts_config=MCTSConfig(
+            dirichlet_alpha=0.9,
+            dirichlet_frac=0.2,
+            c_init=1.25,
+            c_base=19652,
+        ),
     ),
     match_config=SelfPlayConfig(
         num_processes=12,
@@ -69,6 +84,12 @@ train_config = Config(
             GameConfig(count=100, random_start=50),
         ],
         mcts_num=800,
+        mcts_config=MCTSConfig(
+            dirichlet_alpha=0.9,
+            dirichlet_frac=0.2,
+            c_init=1.25,
+            c_base=19652,
+        ),
     ),
     dataset_config=DatasetConfig(
         periodic_delete=2000,
@@ -83,8 +104,8 @@ train_config = Config(
         weight_decay=1e-6,
         restart_epoch=0,
         load_checkpoint="",
-        save_dataset="checkpoint/dataset.pt",
-        load_dataset=None,
+        save_dataset=None,
+        load_dataset="checkpoint/dataset.pt",
     ),
 )
 
@@ -101,6 +122,12 @@ debug_config = Config(
             GameConfig(count=3, random_start=50),
         ],
         mcts_num=4,
+        mcts_config=MCTSConfig(
+            dirichlet_alpha=0.9,
+            dirichlet_frac=0.2,
+            c_init=1.25,
+            c_base=19652,
+        ),
     ),
     match_config=SelfPlayConfig(
         num_processes=15,
@@ -113,6 +140,12 @@ debug_config = Config(
             GameConfig(count=3, random_start=50),
         ],
         mcts_num=4,
+        mcts_config=MCTSConfig(
+            dirichlet_alpha=0.9,
+            dirichlet_frac=0.2,
+            c_init=1.25,
+            c_base=19652,
+        ),
     ),
     dataset_config=DatasetConfig(
         periodic_delete=10,

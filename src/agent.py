@@ -19,17 +19,16 @@ class ModelAgent:
     #     MCTS + e-greedy decision process
     #     buffer: [(state, turn, policy)]
 
-    def __init__(self, stone: Stone, mct: MCT, mcts_num: int) -> None:
+    def __init__(self, stone: Stone, mct: MCT) -> None:
         self.stone = stone
         self.mct = mct
-        self.mcts_num = mcts_num
 
         self.buffer: list[Step] = []  # (state, policy)
 
     def act(self, board: Board) -> int:
         actions = board.get_actions(self.stone)
 
-        policy = self.mct.search(board, self.stone, self.mcts_num)
+        policy = self.mct.search(board, self.stone)
         self.buffer.append(
             Step(state=copy.deepcopy(board), turn=self.stone, policy=policy)
         )
@@ -48,7 +47,7 @@ class ModelAgent:
     def act_random(self, board: Board) -> int:
         actions = board.get_actions(self.stone)
 
-        policy = self.mct.search(board, self.stone, self.mcts_num)
+        policy = self.mct.search(board, self.stone)
         self.buffer.append(
             Step(state=copy.deepcopy(board), turn=self.stone, policy=policy)
         )

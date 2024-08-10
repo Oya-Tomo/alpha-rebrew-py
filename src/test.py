@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import make_interp_spline
 from agent import ModelAgent
 from bitboard import Board, Stone, flip, pos_to_idx
+from config import MCTSConfig
 from models import PVNet
 from mcts import MCT
 
@@ -48,11 +49,20 @@ def manual_match(tester: Stone):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     board = Board()
     model = PVNet()
-    model.load_state_dict(torch.load("checkpoint/model_67.pt")["model"])
+    model.load_state_dict(torch.load("checkpoint/model_75.pt")["model"])
     model = model.to(device)
 
-    mct = MCT(model, 100, 0.0001)
-    agent = ModelAgent(flip(tester), mct, 1000)
+    mct = MCT(
+        model,
+        MCTSConfig(
+            simulation=800,
+            dirichlet_alpha=10.0,
+            dirichlet_frac=0.01,
+            c_base=19652,
+            c_init=1.25,
+        ),
+    )
+    agent = ModelAgent(flip(tester), mct)
 
     model.eval()
 
@@ -137,4 +147,4 @@ def random_match(tester: Stone):
 
 
 if __name__ == "__main__":
-    manual_match(Stone.BLACK)
+    manual_match(Stone.WHITE)

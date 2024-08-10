@@ -25,7 +25,7 @@ args = parser.parse_args()
 class Predictor:
     def __init__(self):
         # estimator
-        checkpoint = torch.load("checkpoint/model_75.pt")
+        checkpoint = torch.load("checkpoint/model_85.pt")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = PVNet().to(self.device)
         self.model.load_state_dict(checkpoint["model"])
@@ -229,6 +229,7 @@ class OthelloGame:
 
     def ready_screen(self) -> None:
         self.board = Board()
+        self.turn = Stone.BLACK
         for frame in range(self.time_to_frame(5)):
             if frame < self.time_to_frame(2):
                 text = FONTS[60].render("Ready?", True, YELLOW)

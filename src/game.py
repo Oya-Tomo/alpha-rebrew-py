@@ -229,6 +229,7 @@ class OthelloGame:
 
     def ready_screen(self) -> None:
         self.board = Board()
+        self.turn = Stone.BLACK
         for frame in range(self.time_to_frame(5)):
             if frame < self.time_to_frame(2):
                 text = FONTS[60].render("Ready?", True, YELLOW)

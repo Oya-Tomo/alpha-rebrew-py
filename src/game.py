@@ -25,7 +25,7 @@ args = parser.parse_args()
 class Predictor:
     def __init__(self):
         # estimator
-        checkpoint = torch.load("checkpoint/model_85.pt")
+        checkpoint = torch.load("checkpoint/model_7.pt")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = PVNet().to(self.device)
         self.model.load_state_dict(checkpoint["model"])

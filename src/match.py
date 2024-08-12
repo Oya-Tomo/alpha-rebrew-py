@@ -1,6 +1,8 @@
+from multiprocessing.connection import Connection
 import random
 import torch
 from torch.multiprocessing import Queue
+from batch_mcts import BatchMCT
 from bitboard import Board, Stone, flip
 from agent import ModelAgent
 from config import MCTSConfig
@@ -46,6 +48,35 @@ def self_play(
     white_model.load_state_dict(white_weight)
     white_model = white_model.to(device)
     white_mct = MCT(white_model, config)
+    white_agent = ModelAgent(Stone.WHITE, white_mct)
+
+    board, turn = generate_random_board(random_start)
+
+    while not board.is_over():
+        if turn == Stone.BLACK:
+            action = black_agent.act(board)
+        else:
+            action = white_agent.act(board)
+
+        board.act(turn, action)
+        turn = flip(turn)
+
+    b, w, e = board.get_count()
+    score = count_to_score(b, w)
+
+    queue.put((black_agent.get_history(), score, white_agent.get_history(), -score))
+
+
+def self_play_batched(
+    queue: Queue,
+    pipe: Connection,
+    config: MCTSConfig,
+    random_start: int,
+) -> None:
+    black_mct = BatchMCT(pipe, config)
+    black_agent = ModelAgent(Stone.BLACK, black_mct)
+
+    white_mct = BatchMCT(pipe, config)
     white_agent = ModelAgent(Stone.WHITE, white_mct)
 
     board, turn = generate_random_board(random_start)

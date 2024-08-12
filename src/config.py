@@ -177,4 +177,4 @@ debug_config = Config(
     ),
 )
 
-config = train_config  # export config
+config = debug_config  # export config

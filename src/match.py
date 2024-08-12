@@ -2,7 +2,7 @@ from multiprocessing.connection import Connection
 import random
 import torch
 from torch.multiprocessing import Queue
-from batch_mcts import BatchMCT
+from batch_mcts import BatchMCT, ConnectInfo
 from bitboard import Board, Stone, flip
 from agent import ModelAgent
 from config import MCTSConfig
@@ -51,6 +51,8 @@ def self_play(
 
         board.act(turn, action)
         turn = flip(turn)
+
+    pipe.send(ConnectInfo(close=True))
 
     b, w, e = board.get_count()
     score = count_to_score(b, w)

@@ -37,6 +37,11 @@ def score_to_count(score: float) -> tuple[int, int]:
 
 
 @dataclass
+class ConnectInfo:
+    close: bool
+
+
+@dataclass
 class BatchInputItem:
     state: Board
     turn: Stone
@@ -208,16 +213,23 @@ def predict_process(weight, pipes: list[Connection], batch: int, recv_loop: int 
     model.eval()
 
     while True:
-        ids = []
+        recv_pipes = []
         inputs = []
         for _ in range(recv_loop):
             for id, pipe in enumerate(pipes):
                 if len(inputs) >= batch:
                     break
+                if pipe.closed:
+                    continue
                 if pipe.poll():
-                    data: BatchInputItem = pipe.recv()
-                    ids.append(id)
-                    inputs.append(data.state.to_tensor(data.turn))
+                    data = pipe.recv()
+                    if isinstance(data, ConnectInfo):
+                        if data.close:
+                            pipe.close()
+                            continue
+                    elif isinstance(data, BatchInputItem):
+                        recv_pipes.append(pipe)
+                        inputs.append(data.state.to_tensor(data.turn))
 
         if len(inputs) == 0:
             continue
@@ -228,8 +240,8 @@ def predict_process(weight, pipes: list[Connection], batch: int, recv_loop: int 
             policies: torch.Tensor = policies.cpu().reshape(-1, ACTION_COUNT)
             values: torch.Tensor = values.cpu().flatten()
 
-        for i, id in enumerate(ids):
-            pipes[id].send(
+        for i, pipe in enumerate(recv_pipes):
+            pipe.send(
                 BatchOutputItem(
                     policy=policies[i].tolist(),
                     value=values[i].item(),

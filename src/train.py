@@ -81,7 +81,8 @@ def self_play_loop(
 
         black_history, black_score, white_history, white_score = queue.get()
         yield black_history, black_score, white_history, white_score
-    predict.join()
+
+    predict.terminate()
 
 
 def train():

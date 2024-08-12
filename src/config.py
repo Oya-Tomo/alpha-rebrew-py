@@ -56,7 +56,7 @@ class Config:
 
 train_config = Config(
     warmup_config=SelfPlayConfig(
-        num_processes=12,
+        num_processes=128,
         game_config=[
             GameConfig(count=200, random_start=0),
             GameConfig(count=200, random_start=5),
@@ -80,7 +80,7 @@ train_config = Config(
         ),
     ),
     match_config=SelfPlayConfig(
-        num_processes=12,
+        num_processes=128,
         game_config=[
             GameConfig(count=20, random_start=0),
             GameConfig(count=20, random_start=5),
@@ -177,4 +177,4 @@ debug_config = Config(
     ),
 )
 
-config = train_config  # export config
+config = debug_config  # export config

@@ -122,8 +122,6 @@ class MCT:
     def expand(self, state: Board, turn: Stone):
         s = state.to_key(turn)
 
-        # normal expand process
-
         self.N[s] = [0] * ACTION_COUNT
         self.S[s] = [0] * ACTION_COUNT
         self.transition_cache[s] = [None] * ACTION_COUNT
@@ -133,8 +131,6 @@ class MCT:
             next_state = copy.deepcopy(state)
             next_state.act(turn, action)
             self.transition_cache[s][action] = next_state
-
-        # additional expand process for optimization
 
         state_tensor = state.to_tensor(turn).reshape([1, 3, 8, 8]).to(self.device)
         with torch.no_grad():

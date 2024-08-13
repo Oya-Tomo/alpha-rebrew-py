@@ -1,8 +1,6 @@
-from multiprocessing.connection import Connection
 import random
 import torch
 from torch.multiprocessing import Queue
-from batch_mcts import BatchMCT, ConnectInfo
 from bitboard import Board, Stone, flip
 from agent import ModelAgent
 from config import MCTSConfig
@@ -31,14 +29,23 @@ def generate_random_board(random_start: int) -> tuple[Board, Stone]:
 
 def self_play(
     queue: Queue,
-    pipe: Connection,
+    black_weight,
+    white_weight,
     config: MCTSConfig,
     random_start: int,
-) -> None:
-    black_mct = BatchMCT(pipe, config)
+):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    black_model = PVNet()
+    black_model.load_state_dict(black_weight)
+    black_model = black_model.to(device)
+    black_mct = MCT(black_model, config)
     black_agent = ModelAgent(Stone.BLACK, black_mct)
 
-    white_mct = BatchMCT(pipe, config)
+    white_model = PVNet()
+    white_model.load_state_dict(white_weight)
+    white_model = white_model.to(device)
+    white_mct = MCT(white_model, config)
     white_agent = ModelAgent(Stone.WHITE, white_mct)
 
     board, turn = generate_random_board(random_start)
@@ -51,8 +58,6 @@ def self_play(
 
         board.act(turn, action)
         turn = flip(turn)
-
-    pipe.send(ConnectInfo(close=True))
 
     b, w, e = board.get_count()
     score = count_to_score(b, w)

@@ -1,16 +1,15 @@
+import copy
 import os
 import pprint
-from multiprocessing import Pipe
-from multiprocessing.connection import Connection
+import sys
+import time
 from typing import Generator
-
 import torch
 from torch.utils.data import DataLoader
 from torch.multiprocessing import Queue, Process, set_start_method
 from tqdm import tqdm
 
 from agent import Step
-from batch_mcts import predict_process
 from bitboard import Stone
 from dataloader import PVDataset
 from match import self_play
@@ -29,35 +28,23 @@ def self_play_loop(
     tuple[list[Step], float, list[Step], float], None, None
 ]:  # yield (steps, score, steps, score)
     tasks: list[Process] = []
-    pipes: list[Connection] = []
     workers: list[Process] = []
 
     model_weight = model.cpu().state_dict()
 
     for game in config.game_config:
         for i in range(game.count):
-            cp, cc = Pipe(duplex=True)
             task = Process(
                 target=self_play,
                 args=(
                     queue,
-                    cc,
+                    model_weight,
+                    model_weight,
                     config.mcts_config,
                     game.random_start,
                 ),
             )
             tasks.append(task)
-            pipes.append(cp)
-
-    predict = Process(
-        target=predict_process,
-        args=(
-            model_weight,
-            pipes,
-            config.num_processes // 2,
-        ),
-    )
-    predict.start()
 
     for _ in range(config.num_processes):
         process = tasks.pop(0)
@@ -81,8 +68,6 @@ def self_play_loop(
 
         black_history, black_score, white_history, white_score = queue.get()
         yield black_history, black_score, white_history, white_score
-
-    predict.terminate()
 
 
 def train():

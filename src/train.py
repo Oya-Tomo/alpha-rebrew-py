@@ -92,6 +92,7 @@ def train():
             step_size=config.train_config.step_size,
             gamma=config.train_config.gamma,
         )
+        loss_history = []
     else:
         checkpoint = torch.load(config.train_config.load_checkpoint)
         model = PVNet().to(device)
@@ -101,8 +102,15 @@ def train():
             lr=config.train_config.lr,
             weight_decay=config.train_config.weight_decay,
         )
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=config.train_config.step_size,
+            gamma=config.train_config.gamma,
+        )
         model.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optimizer"])
+        scheduler.load_state_dict(checkpoint["scheduler"])
+        loss_history = checkpoint["loss_history"]
 
     print("Warmup Start")
 
@@ -124,8 +132,6 @@ def train():
         if not os.path.exists("checkpoint"):
             os.makedirs("checkpoint")
         torch.save(dataset.state_dict(), config.train_config.save_dataset)
-
-    loss_history = []
 
     for loop in range(config.train_config.loops):
         print(f"Loop {loop} Start")

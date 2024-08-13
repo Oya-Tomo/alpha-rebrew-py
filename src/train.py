@@ -190,6 +190,9 @@ def train():
             print("loss in epoch")
             pprint.pprint(epoch_loss_history)
 
+        print(f"Scheduled Learning Rate: {scheduler.get_last_lr()}")
+        scheduler.step()
+
         if (
             loop % config.train_config.save_epochs
             == config.train_config.save_epochs - 1

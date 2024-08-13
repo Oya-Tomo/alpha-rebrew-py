@@ -205,7 +205,7 @@ def train():
                 f"checkpoint/model_{loop}.pt",
             )
             if config.train_config.save_dataset is not None:
-                print("Save Dataset")
+                print(f"Save Dataset : len {len(dataset)}")
                 torch.save(dataset.state_dict(), config.train_config.save_dataset)
 
 

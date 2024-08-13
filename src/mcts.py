@@ -136,30 +136,14 @@ class MCT:
 
         # additional expand process for optimization
 
-        inputs_keys = []
-        inputs = []
+        state_tensor = state.to_tensor(turn).reshape([1, 3, 8, 8]).to(self.device)
+        with torch.no_grad():
+            policy_tensor, value_tensor = self.model(state_tensor)
+            policy = policy_tensor.cpu().numpy().reshape(-1).tolist()
+            value = value_tensor.cpu().item()
 
-        if not (s in self.P):
-            inputs_keys.append(s)
-            inputs.append(state.to_tensor(turn))
-
-            for action in actions:
-                next_state = self.transition_cache[s][action]
-                next_s = next_state.to_key(flip(turn))
-                if not (next_s in self.P) and not next_state.is_over():
-                    inputs_keys.append(next_s)
-                    inputs.append(next_state.to_tensor(flip(turn)))
-
-            if len(inputs) > 0:
-                with torch.no_grad():
-                    inputs = torch.stack(inputs).to(self.device)
-                    policies, values = self.model(inputs)
-
-                for key, policy, value in zip(inputs_keys, policies, values):
-                    policy = policy.reshape(-1).tolist()
-                    value = value.item()
-                    self.P[key] = policy
-                    self.V[key] = value
+        self.P[s] = policy
+        self.V[s] = value
 
         return self.V[s]
 

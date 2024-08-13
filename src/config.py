@@ -121,7 +121,7 @@ train_config = Config(
         restart_epoch=0,
         load_checkpoint="",
         save_dataset="checkpoint/dataset.pt",
-        load_dataset=None,
+        load_dataset="checkpoint/dataset.pt",
     ),
 )
 

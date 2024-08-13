@@ -91,12 +91,12 @@ def train():
         checkpoint = torch.load(config.train_config.load_checkpoint)
         model = PVNet().to(device)
 
-        model.load_state_dict(checkpoint["model"])
         optimizer = torch.optim.Adam(
             model.parameters(),
             lr=config.train_config.lr,
             weight_decay=config.train_config.weight_decay,
         )
+        model.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optimizer"])
 
     print("Warmup Start")

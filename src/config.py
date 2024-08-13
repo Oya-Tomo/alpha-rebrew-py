@@ -56,7 +56,7 @@ class Config:
 
 train_config = Config(
     warmup_config=SelfPlayConfig(
-        num_processes=128,
+        num_processes=13,
         game_config=[
             GameConfig(count=200, random_start=0),
             GameConfig(count=200, random_start=5),
@@ -80,7 +80,7 @@ train_config = Config(
         ),
     ),
     match_config=SelfPlayConfig(
-        num_processes=128,
+        num_processes=13,
         game_config=[
             GameConfig(count=20, random_start=0),
             GameConfig(count=20, random_start=5),
@@ -112,7 +112,7 @@ train_config = Config(
         epochs=50,
         save_epochs=2,
         batch_size=512,
-        lr=0.005,
+        lr=0.002,
         weight_decay=1e-6,
         restart_epoch=0,
         load_checkpoint="",

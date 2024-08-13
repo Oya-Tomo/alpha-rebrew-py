@@ -38,6 +38,8 @@ class TrainConfig:
     batch_size: int
     lr: float
     weight_decay: float
+    step_size: int
+    gamma: float
 
     restart_epoch: int
     load_checkpoint: str
@@ -112,8 +114,10 @@ train_config = Config(
         epochs=50,
         save_epochs=2,
         batch_size=512,
-        lr=0.002,
+        lr=0.005,
         weight_decay=1e-6,
+        step_size=10,
+        gamma=0.5,
         restart_epoch=0,
         load_checkpoint="",
         save_dataset="checkpoint/dataset.pt",
@@ -170,6 +174,8 @@ debug_config = Config(
         batch_size=512,
         lr=0.005,
         weight_decay=1e-6,
+        step_size=10,
+        gamma=0.5,
         restart_epoch=0,
         load_checkpoint="",
         save_dataset=None,

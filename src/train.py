@@ -87,6 +87,11 @@ def train():
             lr=config.train_config.lr,
             weight_decay=config.train_config.weight_decay,
         )
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=config.train_config.step_size,
+            gamma=config.train_config.gamma,
+        )
     else:
         checkpoint = torch.load(config.train_config.load_checkpoint)
         model = PVNet().to(device)

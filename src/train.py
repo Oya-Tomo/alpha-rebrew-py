@@ -200,6 +200,7 @@ def train():
                 {
                     "model": model.state_dict(),
                     "optimizer": optimizer.state_dict(),
+                    "scheduler": scheduler.state_dict(),
                     "loss_history": loss_history,
                 },
                 f"checkpoint/model_{loop}.pt",

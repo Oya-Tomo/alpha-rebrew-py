@@ -101,7 +101,7 @@ train_config = Config(
             simulation=800,
             dirichlet_alpha=0.9,
             dirichlet_frac=0.2,
-            c_init=1.0,
+            c_init=1.1,
             c_base=19652,
         ),
     ),

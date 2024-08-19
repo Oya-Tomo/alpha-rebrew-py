@@ -9,23 +9,26 @@ from mcts import MCT, count_to_score
 from models import PVNet
 
 
-def generate_random_board(random_start: int) -> tuple[Board, Stone]:
+def generate_random_board(n: int) -> tuple[Board, Stone]:
     while True:
+        _n = n
         board = Board()
         turn = Stone.BLACK
 
-        for _ in range(random_start):
-            if board.is_over():
-                break
+        while _n > 0 and not board.is_over():
             actions = board.get_actions(turn)
+            if actions == [64]:
+                board.act(turn, 64)
+                turn = flip(turn)
+                continue
+
             action = random.choice(actions)
             board.act(turn, action)
             turn = flip(turn)
+            _n -= 1
 
         if not board.is_over():
-            break
-
-    return board, turn
+            return board, turn
 
 
 def self_play(
@@ -78,19 +81,19 @@ def self_play_loop(
 
     model_weight = model.cpu().state_dict()
 
-    for game in config.game_config:
-        for i in range(game.count):
-            task = Process(
+    for _ in range(config.num_self_play):
+        tasks.append(
+            Process(
                 target=self_play,
                 args=(
                     queue,
                     model_weight,
                     model_weight,
                     config.mcts_config,
-                    game.random_start,
+                    random.randint(0, 58),
                 ),
             )
-            tasks.append(task)
+        )
 
     for _ in range(config.num_processes):
         process = tasks.pop(0)

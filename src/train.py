@@ -1,73 +1,14 @@
-import copy
 import os
 import pprint
-import sys
-import time
-from typing import Generator
 import torch
 from torch.utils.data import DataLoader
-from torch.multiprocessing import Queue, Process, set_start_method
+from torch.multiprocessing import set_start_method
 from tqdm import tqdm
 
-from agent import Step
-from bitboard import Stone
 from dataloader import PVDataset
-from match import self_play
+from match import self_play_loop
 from models import PVNet
-from config import (
-    SelfPlayConfig,
-    config,
-)
-
-
-def self_play_loop(
-    config: SelfPlayConfig,
-    model: PVNet,
-    queue: Queue,
-) -> Generator[
-    tuple[list[Step], float, list[Step], float], None, None
-]:  # yield (steps, score, steps, score)
-    tasks: list[Process] = []
-    workers: list[Process] = []
-
-    model_weight = model.cpu().state_dict()
-
-    for game in config.game_config:
-        for i in range(game.count):
-            task = Process(
-                target=self_play,
-                args=(
-                    queue,
-                    model_weight,
-                    model_weight,
-                    config.mcts_config,
-                    game.random_start,
-                ),
-            )
-            tasks.append(task)
-
-    for _ in range(config.num_processes):
-        process = tasks.pop(0)
-        process.start()
-        workers.append(process)
-
-    while len(workers) > 0:
-        joined = False
-        while True and joined is False:
-            for index in range(len(workers)):
-                if workers[index].exitcode is not None:
-                    workers[index].join()
-                    workers.pop(index)
-                    joined = True
-                    break
-
-        if len(tasks) > 0:
-            process = tasks.pop(0)
-            process.start()
-            workers.append(process)
-
-        black_history, black_score, white_history, white_score = queue.get()
-        yield black_history, black_score, white_history, white_score
+from config import config
 
 
 def train():
@@ -76,7 +17,6 @@ def train():
     except RuntimeError:
         pass
 
-    queue = Queue(maxsize=20)
     dataset = PVDataset(config.dataset_config.limit_length)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -119,7 +59,7 @@ def train():
         dataset.load_state_dict(torch.load(config.train_config.load_dataset))
         print(f"Dataset Length: {len(dataset)}")
     else:
-        for i, res in enumerate(self_play_loop(config.warmup_config, model, queue)):
+        for i, res in enumerate(self_play_loop(config.warmup_config, model)):
             black_history, black_score, white_history, white_score = res
             dataset.add(black_history, black_score)
             dataset.add(white_history, white_score)
@@ -137,7 +77,7 @@ def train():
         print(f"Loop {loop} Start")
 
         dataset.periodic_delete(config.dataset_config.periodic_delete)
-        for i, res in enumerate(self_play_loop(config.match_config, model, queue)):
+        for i, res in enumerate(self_play_loop(config.match_config, model)):
             black_history, black_score, white_history, white_score = res
             dataset.add(black_history, black_score)
             dataset.add(white_history, white_score)
@@ -156,17 +96,18 @@ def train():
 
         with tqdm(
             range(config.train_config.epochs),
-            bar_format="{l_bar}{bar:40}{r_bar}{bar:-10b}",
+            ncols=80,
+            bar_format="{l_bar}{bar:10}{r_bar}",
         ) as pbar:
             epoch_loss_history = []
             for epoch in pbar:
                 total_loss = 0
-                pbar.set_description(f"Epoch {epoch}")
 
                 for state, policy, value in tqdm(
                     dataloader,
-                    bar_format="{l_bar}{bar:40}{r_bar}{bar:-10b}",
+                    bar_format="{l_bar}{bar:10}{r_bar}",
                     leave=False,
+                    ncols=60,
                 ):
                     state = state.to(device)
                     policy = policy.to(device)
@@ -208,9 +149,11 @@ def train():
                 },
                 f"checkpoint/model_{loop}.pt",
             )
-            if config.train_config.save_dataset is not None:
-                print(f"Save Dataset : len {len(dataset)}")
-                torch.save(dataset.state_dict(), config.train_config.save_dataset)
+        if config.train_config.save_dataset is not None:
+            if not os.path.exists("checkpoint"):
+                os.makedirs("checkpoint")
+            print(f"Save Dataset : len {len(dataset)}")
+            torch.save(dataset.state_dict(), config.train_config.save_dataset)
 
 
 if __name__ == "__main__":

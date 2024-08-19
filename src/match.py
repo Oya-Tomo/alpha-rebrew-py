@@ -1,9 +1,10 @@
 import random
+from typing import Generator
 import torch
-from torch.multiprocessing import Queue
+from torch.multiprocessing import Queue, Process
 from bitboard import Board, Stone, flip
-from agent import ModelAgent
-from config import MCTSConfig
+from agent import ModelAgent, Step
+from config import MCTSConfig, SelfPlayConfig
 from mcts import MCT, count_to_score
 from models import PVNet
 
@@ -63,6 +64,56 @@ def self_play(
     score = count_to_score(b, w)
 
     queue.put((black_agent.get_history(), score, white_agent.get_history(), -score))
+
+
+def self_play_loop(
+    config: SelfPlayConfig,
+    model: PVNet,
+) -> Generator[
+    tuple[list[Step], float, list[Step], float], None, None
+]:  # yield (steps, score, steps, score)
+    queue: Queue = Queue()
+    tasks: list[Process] = []
+    workers: list[Process] = []
+
+    model_weight = model.cpu().state_dict()
+
+    for game in config.game_config:
+        for i in range(game.count):
+            task = Process(
+                target=self_play,
+                args=(
+                    queue,
+                    model_weight,
+                    model_weight,
+                    config.mcts_config,
+                    game.random_start,
+                ),
+            )
+            tasks.append(task)
+
+    for _ in range(config.num_processes):
+        process = tasks.pop(0)
+        process.start()
+        workers.append(process)
+
+    while len(workers) > 0:
+        joined = False
+        while True and joined is False:
+            for index in range(len(workers)):
+                if workers[index].exitcode is not None:
+                    workers[index].join()
+                    workers.pop(index)
+                    joined = True
+                    break
+
+        if len(tasks) > 0:
+            process = tasks.pop(0)
+            process.start()
+            workers.append(process)
+
+        black_history, black_score, white_history, white_score = queue.get()
+        yield black_history, black_score, white_history, white_score
 
 
 if __name__ == "__main__":

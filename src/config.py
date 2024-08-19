@@ -96,7 +96,7 @@ train_config = Config(
 
 debug_config = Config(
     warmup_config=SelfPlayConfig(
-        num_processes=12,
+        num_processes=5,
         num_self_play=10,
         mcts_config=MCTSConfig(
             simulation=10,
@@ -107,7 +107,7 @@ debug_config = Config(
         ),
     ),
     match_config=SelfPlayConfig(
-        num_processes=15,
+        num_processes=5,
         num_self_play=5,
         mcts_config=MCTSConfig(
             simulation=10,
@@ -137,4 +137,4 @@ debug_config = Config(
     ),
 )
 
-config = debug_config  # export config
+config = train_config  # export config
